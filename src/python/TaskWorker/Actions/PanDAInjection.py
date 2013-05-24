@@ -148,7 +148,7 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters    += '--cmsswVersion=%s ' % task['tm_job_sw']
         pandajob.jobParameters    += '--scramArch=%s ' % task['tm_job_arch']
         pandajob.jobParameters    += '--inputFile=\'%s\' ' % json.dumps(infiles)
-        pandajob.jobParameters    += '--lumiMask=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
+        pandajob.jobParameters    += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
         pandajob.jobParameters    += '-o "%s" ' % str(outjobpar)
         pandajob.jobParameters    += '--dbs_url=%s ' % task['tm_dbs_url']
         pandajob.jobParameters    += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']

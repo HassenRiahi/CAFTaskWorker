@@ -32,14 +32,14 @@ class Specs2Jobs(TaskAction):
         for site in locationsjobs:
             jg = WMJobGroup()
             for job in locationsjobs[site]:
-                # this is soooo ugly 
-                inputfiles = literal_eval(literal_eval(job.jobParameters.split('--inputFile=')[-1].split('--lumiMask')[0]))
+                # this is soooo ugly
+                inputfiles = literal_eval(literal_eval(job.jobParameters.split('--inputFile=')[-1].split('--runAndLumis')[0]))
                 jj = WMJob()
                 jj['input_files'] = []
                 for infile in inputfiles:
                     jj['input_files'].append({'lfn': infile, 'block': 'unknown', 'locations': [site.split('ANALY_')[-1]]})
-                # this is soooo ugly 
-                jj['mask']['runAndLumis'] = literal_eval(job.jobParameters.split('--lumiMask=')[-1].split(' -o')[0])
+                # this is soooo ugly
+                jj['mask']['runAndLumis'] = literal_eval(job.jobParameters.split('--runAndLumis=')[-1].split(' -o')[0])
                 jj['panda_oldjobid'] = job.PandaID
                 jg.add(jj)
             jg.commit()
