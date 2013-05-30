@@ -25,7 +25,7 @@ JOB Job%(count)d Job.submit
 #PRE_SKIP Job%(count)d 3
 #TODO: Disable retries for now - fail fast to help debug
 #RETRY Job%(count)d 3
-VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s" +desiredSites="\\"%(desiredSites)s\\"" +CRAB_localOutputFiles="\\"%(localOutputFiles)s\\""
+VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s" +DESIRED_Sites="\\"%(desiredSites)s\\"" +CRAB_localOutputFiles="\\"%(localOutputFiles)s\\""
 
 JOB ASO%(count)d ASO.submit
 VARS ASO%(count)d count="%(count)d" outputFiles="%(remoteOutputFiles)s"
@@ -92,14 +92,16 @@ Executable = gWMS-CMSRunAnaly.sh
 Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
-Arguments = "-o $(CRAB_AdditionalOutputFiles) -a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) '--inputFile=$(inputFiles)' '--lumiMask=$(runAndLumiMask)' --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) --jobNumber=$(CRAB_Id)"
+Arguments = "-o $(CRAB_AdditionalOutputFiles) -a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) --jobNumber=$(CRAB_Id)"
 transfer_input_files = CMSRunAnaly.sh, cmscp.py
 transfer_output_files = jobReport.json.$(count)
 Environment = SCRAM_ARCH=$(CRAB_JobArch)
 should_transfer_files = YES
-x509userproxy = %(x509up_file)s
+#x509userproxy = %(x509up_file)s
+use_x509userproxy = true
 # TODO: Uncomment this when we get out of testing mode
-Requirements = ((target.IS_GLIDEIN =!= TRUE) || ((target.GLIDEIN_CMSSite =!= UNDEFINED) && (stringListIMember(target.GLIDEIN_CMSSite, desiredSites) )))
+Requirements = (target.IS_GLIDEIN =!= TRUE) || (target.GLIDEIN_CMSSite =!= UNDEFINED)
+#Requirements = ((target.IS_GLIDEIN =!= TRUE) || ((target.GLIDEIN_CMSSite =!= UNDEFINED) && (stringListIMember(target.GLIDEIN_CMSSite, DESIRED_SEs) )))
 leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
 queue
 """
@@ -118,7 +120,8 @@ transfer_input_files = job_log.$(count), jobReport.json.$(count)
 +TransferOutput = ""
 Error = aso.$(count).err
 Environment = PATH=/usr/bin:/bin
-x509userproxy = %(x509up_file)s
+use_x509userproxy true
+#x509userproxy = %(x509up_file)s
 leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
 queue
 """
@@ -289,6 +292,7 @@ def create_subdag(splitter_result, **kwargs):
             with open("Job.submit", "r") as fd:
                 with open("Job.submit.%(count)d" % spec, "w") as out_fd:
                     out_fd.write("+desiredSites=\"%(desiredSites)s\"\n" % spec)
+                    out_fd.write("+DESIRED_Sites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+CRAB_localOutputFiles=\"%(localOutputFiles)s\"\n" % spec)
                     out_fd.write(fd.read())
             dag += dag_fragment_workaround % spec

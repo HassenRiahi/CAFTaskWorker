@@ -23,7 +23,7 @@ try:
     import WMCore.BossAir.Plugins.RemoteCondorPlugin as RemoteCondorPlugin
 except ImportError:
     if not htcondor:
-        raise
+        raise ImportError, "You must have either the RemoteCondorPlugin or htcondor modules"
 
 CRAB_META_HEADERS = \
 """
@@ -42,13 +42,14 @@ MASTER_DAG_SUBMIT_FILE = CRAB_HEADERS + CRAB_META_HEADERS + \
 +CRAB_Attempt = 0
 +CRAB_Workflow = %(workflow)s
 +CRAB_UserDN = %(userdn)s
-universe = vanilla
+universe = local
 +CRAB_ReqName = %(requestname)s
 scratch = %(scratch)s
 bindir = %(bindir)s
 output = $(scratch)/request.out
 error = $(scratch)/request.err
 executable = $(bindir)/dag_bootstrap_startup.sh
+arguments = $(bindir)/master_dag
 transfer_input_files = %(inputFilesString)s
 transfer_output_files = %(outputFilesString)s
 leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
@@ -57,8 +58,8 @@ on_exit_remove = ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 
 remove_kill_sig = SIGUSR1
 +HoldKillSig = "SIGUSR1"
 on_exit_hold = (ExitCode =!= UNDEFINED && ExitCode != 0)
-+Environment= strcat("PATH=/usr/bin:/bin CONDOR_ID=", ClusterId, ".", ProcId)
-+RemoteCondorSetup = %(remote_condor_setup)s
++Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId)
++RemoteCondorSetupa = "%(remote_condor_setup)s"
 +TaskType = "ROOT"
 X509UserProxy = %(userproxy)s
 queue 1
@@ -100,7 +101,7 @@ def addCRABInfoToClassAd(ad, info):
 class DagmanSubmitter(TaskAction.TaskAction):
 
     """
-    Submit a DAG to a remote HTCondor schedd
+    Submit a DAG to a HTCondor schedd
     """
 
     def getSchedd(self):
@@ -133,7 +134,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
         If address is None, then we are using the BossAir plugin.  Otherwise,
         the schedd object is of type htcondor.Schedd.
         """
-        if htcondor:
+        if htcondor and not getattr(self.config.General, 'enableGsissh', 0):
             if name == "localhost":
                 schedd = htcondor.Schedd()
                 with open(htcondor.param['SCHEDD_ADDRESS_FILE']) as fd:
