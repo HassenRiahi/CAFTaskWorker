@@ -125,7 +125,7 @@ class PanDAInjection(PanDAAction):
             outjobpar[outputfile] = filespec.lfn
         for outputfile in task['tm_tfile_outfiles']:
             outfilestring += '%s,' % outputfile
-            filespec = outFileSpec(outfputile)
+            filespec = outFileSpec(outputfile)
             alloutfiles.append(filespec)
             #pandajob.addFile(filespec)
             outjobpar[outputfile] = filespec.lfn
