@@ -5,6 +5,8 @@ import os
 
 from WMCore.Configuration import loadConfigurationFile, Configuration
 
+from logging.handlers import RotatingFileHandler
+
 from TaskWorker.DataObjects.Task import Task
 from TaskWorker.Worker import Worker
 from TaskWorker.WorkerExceptions import *
@@ -46,13 +48,19 @@ class MasterWorker(object):
             :arg bool quiet: it tells if a quiet logger is needed
             :arg bool debug: it tells if needs a verbose logger
             :return logger: a logger with the appropriate logger level."""
+            logHandler = RotatingFileHandler('twlog.log',
+                "a", 1000000000, 3)
+            logFormatter = \
+                logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
+            logHandler.setFormatter(logFormatter)
+            logging.getLogger().addHandler(logHandler)
             loglevel = logging.INFO
             if quiet:
                 loglevel = logging.WARNING
             if debug:
                 loglevel = logging.DEBUG
-            logging.basicConfig(level=loglevel)
-            logger = logging.getLogger(type(self).__name__)
+            logging.getLogger().setLevel(loglevel)
+            logger = logging.getLogger()
             logger.debug("Logging level initialized to %s." %loglevel)
             return logger
         self.logger = getLogging(quiet, debug)
