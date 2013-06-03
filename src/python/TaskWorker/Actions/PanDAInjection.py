@@ -55,7 +55,7 @@ class PanDAInjection(PanDAAction):
                              unique ids in the whole task
         :arg str basejobname: common string between all the jobs in their job name
         :return: the list of job sepcs objects."""
-        PandaServerInterface.refreshSpecs()
+        PandaServerInterface.refreshSpecs(task['tm_user_dn'], task['tm_user_vo'], task['tm_user_group'], task['tm_user_role'])
         pandajobspec = []
         i = startjobid
         for job in jobgroup.jobs:
@@ -125,7 +125,7 @@ class PanDAInjection(PanDAAction):
             outjobpar[outputfile] = filespec.lfn
         for outputfile in task['tm_tfile_outfiles']:
             outfilestring += '%s,' % outputfile
-            filespec = outFileSpec(outfputile)
+            filespec = outFileSpec(outputfile)
             alloutfiles.append(filespec)
             #pandajob.addFile(filespec)
             outjobpar[outputfile] = filespec.lfn
