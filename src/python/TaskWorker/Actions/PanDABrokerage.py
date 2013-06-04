@@ -11,17 +11,24 @@ class PanDABrokerage(PanDAAction):
     def execute(self, *args, **kwargs):
         results = []
         for jgroup in args[0]:
+            self.logger.debug(jgroup)  
             possiblesites = jgroup.jobs[0]['input_files'][0]['locations']
+            self.logger.debug("possiblesites == " + str(possiblesites))
+            if len(possiblesites) == 0:
+                msg = "DLS retourned no sites for the block"
+                self.logger.error(msg)
+                results.append(Result(task=kwargs['task'], result=(jgroup, None), err=msg))
+                continue
             self.logger.debug("white list == " + str(set(kwargs['task']['tm_site_whitelist'])))
             self.logger.debug("black list == " + str(set(kwargs['task']['tm_site_blacklist'])))
-            availablesites = list( set(kwargs['task']['tm_site_whitelist']) if kwargs['task']['tm_site_whitelist'] else set(possiblesites) &
+            availablesites = list( (set(possiblesites) & set(kwargs['task']['tm_site_whitelist'])) if kwargs['task']['tm_site_whitelist'] else set(possiblesites) &
                                    set(possiblesites) -
                                    set(kwargs['task']['tm_site_blacklist']))
-            self.logger.info( str(availablesites))
+            self.logger.info( 'available sites == %s' % str(availablesites))
             fixedsites = set(self.config.Sites.available)
             availablesites = list( set(availablesites) & fixedsites )
             if len(availablesites) == 0:
-                msg = "No site available before brokering, will skip injection"
+                msg = "No site available before brokering, will skip injection. Check White/Back lists"
                 self.logger.error(msg)
                 results.append(Result(task=kwargs['task'], result=(jgroup, None), err=msg))
                 continue
