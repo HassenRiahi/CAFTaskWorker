@@ -152,6 +152,7 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters    += '-o "%s" ' % str(outjobpar)
         pandajob.jobParameters    += '--dbs_url=%s ' % task['tm_dbs_url']
         pandajob.jobParameters    += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']
+        pandajob.jobParameters    += '--publishFiles=%s ' % ('True' if task['tm_publication'] == 'T' else 'False')
         pandajob.jobParameters    += '%s ' % task['tm_taskname'] #Needed by ASO
 
         if 'panda_oldjobid' in job and job['panda_oldjobid']:
