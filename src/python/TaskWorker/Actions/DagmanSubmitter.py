@@ -104,11 +104,18 @@ class DagmanSubmitter(TaskAction.TaskAction):
     Submit a DAG to a HTCondor schedd
     """
 
+    def getRemoteCondor(self):
+        if self.config and hasattr(self.config, 'General') and hasattr(self.config.General, 'enableGsissh'):
+            return self.config.General.enableGsissh
+        elif htcondor:
+            return False
+        return True
+
     def getSchedd(self):
         """
         Determine a schedd to use for this task.
         """
-        if not htcondor:
+        if self.getRemoteCondor():
             return self.config.BossAir.remoteUserHost
         collector = None
         if self.config and hasattr(self.config, 'General') and hasattr(self.config.General, 'condorPool'):
@@ -134,7 +141,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
         If address is None, then we are using the BossAir plugin.  Otherwise,
         the schedd object is of type htcondor.Schedd.
         """
-        if htcondor and not getattr(self.config.General, 'enableGsissh', 0):
+        if not self.getRemoteCondor():
             if name == "localhost":
                 schedd = htcondor.Schedd()
                 with open(htcondor.param['SCHEDD_ADDRESS_FILE']) as fd:
