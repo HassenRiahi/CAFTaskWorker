@@ -8,15 +8,15 @@ ORIGDIR=$PWD
 STARTDIR=$PWD/tmp/runtime
 
 WMCOREDIR=$STARTDIR/WMCore
-WMCOREVER=0.9.70-dagman
+WMCOREVER=0.9.70-dagman2
 WMCOREREPO=bbockelm
 
 TASKWORKERDIR=$STARTDIR/TaskWorker
-TASKWORKERVER=0.0.1pre3-dagman3
+TASKWORKERVER=0.0.1pre3-dagman5
 TASKWORKERREPO=bbockelm
 
 CAFUTILITIESDIR=$STARTDIR/CAFUtilities
-CAFUTILITIESVER=0.0.1pre3-dagman
+CAFUTILITIESVER=0.0.1pre4-dagman
 CAFUTILITIESREPO=bbockelm
 
 DBSDIR=$STARTDIR/DBS
@@ -28,11 +28,11 @@ DLSVER=DLS_1_1_3
 DLSREPO=bbockelm
 
 CRABSERVERDIR=$STARTDIR/CRABServer
-CRABSERVERVER=3.2.0pre2-dagman
+CRABSERVERVER=3.2.0pre2-dagman3
 CRABSERVERREPO=bbockelm
 
 CRABCLIENTDIR=$STARTDIR/CRABClient
-CRABCLIENTVER=3.2.0pre2-dagman
+CRABCLIENTVER=3.2.0pre2-dagman3
 CRABCLIENTREPO=bbockelm
 
 rm -rf $WMCOREDIR && mkdir -p $WMCOREDIR
@@ -114,7 +114,13 @@ export CRAB3_BASEPATH=\`readlink -e \$CRAB3_BASEPATH\`
 export PATH=\$CRAB3_BASEPATH:\$PATH
 export PYTHONPATH=\$CRAB3_BASEPATH/CRAB3.zip:\$CRAB3_BASEPATH/lib/python:\$PYTHONPATH
 export LD_LIBRARY_PATH=\$CRAB3_BASEPATH/lib:\$CRAB3_BASEPATH/lib/condor:\$LD_LIBRARY_PATH
+if [ "x\$CONDOR_CONFIG" = "x" ] && [ ! -e /etc/condor/condor_config ] && [ ! -e \$HOME/.condor/condor_config ];
+then
+  export CONDOR_CONFIG=\$CRAB3_BASEPATH/lib/fake_condor_config
+fi
 EOF
+
+touch lib/fake_condor_config
 
 mkdir -p bin
 cp CRABServer-$CRABSERVERVER/bin/* bin/
