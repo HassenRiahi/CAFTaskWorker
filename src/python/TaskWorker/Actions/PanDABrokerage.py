@@ -1,4 +1,4 @@
-import PandaServerInterface 
+from PandaServerInterface import runBrokerage
 
 from TaskWorker.Actions.PanDAAction import PanDAAction
 from TaskWorker.DataObjects.Result import Result
@@ -17,7 +17,7 @@ class PanDABrokerage(PanDAAction):
             if len(possiblesites) == 0:
                 msg = "DLS retourned no sites for the block"
                 self.logger.error(msg)
-                results.append(Result(task=kwargs['task'], result=(jgroup, None), err=msg))
+                results.append(Result(task=kwargs['task'], result=(jgroup, None, []), err=msg))
                 continue
             self.logger.debug("white list == " + str(set(kwargs['task']['tm_site_whitelist'])))
             self.logger.debug("black list == " + str(set(kwargs['task']['tm_site_blacklist'])))
@@ -30,22 +30,19 @@ class PanDABrokerage(PanDAAction):
             if len(availablesites) == 0:
                 msg = "No site available before brokering, will skip injection. Check White/Back lists"
                 self.logger.error(msg)
-                results.append(Result(task=kwargs['task'], result=(jgroup, None), err=msg))
+                results.append(Result(task=kwargs['task'], result=(jgroup, None, []), err=msg))
                 continue
             self.logger.info("Asking best site to PanDA between %s" % str(availablesites))
-            selectedsite = PandaServerInterface.runBrokerage(kwargs['task']['tm_user_dn'],
-                                                              kwargs['task']['tm_user_vo'],
-                                                              kwargs['task']['tm_user_group'],
-                                                              kwargs['task']['tm_user_role'],
-                                                              ['ANALY_'+el for el in availablesites])[-1]
+            selectedsite = runBrokerage(proxy=kwargs['task']['user_proxy'],
+                                        sites=self.translateSiteName(availablesites))[-1]
             self.logger.info("Choosed site after brokering " +str(selectedsite))
             if not selectedsite:
                 msg = "No site available after brokering, will skip injection"
                 self.logger.error(msg)
-                results.append(Result(task=kwargs['task'], result=(jgroup, None), err=msg))
+                results.append(Result(task=kwargs['task'], result=(jgroup, None, []), err=msg))
                 continue
             else:
-                results.append(Result(task=kwargs['task'], result=(jgroup, selectedsite)))
+                results.append(Result(task=kwargs['task'], result=(jgroup, selectedsite, availablesites)))
         return results
 
 if __name__ == '__main__':
