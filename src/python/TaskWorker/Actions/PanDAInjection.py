@@ -1,6 +1,6 @@
 from Databases.TaskDB.Interface.Task.SetTasks import setInjectedTasks, setFailedTasks
 from Databases.TaskDB.Interface.JobGroup.MakeJobGroups import addJobGroup
-import PandaServerInterface ## change this to specific imports
+from PandaServerInterface import submitJobs, refreshSpecs, getSite
 from taskbuffer.JobSpec import JobSpec
 from taskbuffer.FileSpec import FileSpec
 
@@ -31,7 +31,7 @@ class PanDAInjection(PanDAAction):
            :arg list taskbuffer.JobSpecs pandajobspecs: the list of specs to inject
            :return: dictionary containining the injection resulting id's."""
         #pandajobspecs = pandajobspecs[0:2]
-        status, injout = PandaServerInterface.submitJobs(pandajobspecs, task['tm_user_dn'], task['tm_user_vo'], task['tm_user_group'], task['tm_user_role'], True)
+        status, injout = submitJobs(jobs=pandajobspecs, proxy=task['user_proxy'], verbose=True)
         self.logger.info('PanDA submission exit code: %s' % status)
         jobsetdef = {}
         for jobid, defid, setid in injout:
@@ -42,7 +42,7 @@ class PanDAInjection(PanDAAction):
         self.logger.debug('Single PanDA injection resulted in %d distinct jobsets and %d jobdefs.' % (len(jobsetdef), sum([len(jobsetdef[k]) for k in jobsetdef])))
         return jobsetdef
 
-    def makeSpecs(self, task, outdataset, jobgroup, site, jobset, jobdef, startjobid, basejobname, lfnhanger):
+    def makeSpecs(self, task, outdataset, jobgroup, site, jobset, jobdef, startjobid, basejobname, lfnhanger, allsites):
         """Building the specs
 
         :arg TaskWorker.DataObject.Task task: the task to work on
@@ -54,19 +54,21 @@ class PanDAInjection(PanDAAction):
         :arg int startjobid: jobs need to have an incremental index, using this to have
                              unique ids in the whole task
         :arg str basejobname: common string between all the jobs in their job name
+        :arg str lfnhanger: random string to append at the file lfn
+        :arg list str allsites: all possible sites where the job can potentially run
         :return: the list of job sepcs objects."""
-        PandaServerInterface.refreshSpecs()
+        refreshSpecs(proxy=task['user_proxy'])
         pandajobspec = []
         i = startjobid
         for job in jobgroup.jobs:
             #if i > 10:
             #    break
             jobname = "%s-%d" %(basejobname, i)
-            pandajobspec.append(self.createJobSpec(task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, i))
+            pandajobspec.append(self.createJobSpec(task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, allsites, job.get('jobnum', i)))
             i += 1
         return pandajobspec, i
 
-    def createJobSpec(self, task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, jobid):
+    def createJobSpec(self, task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, allsites, jobid):
         """Create a spec for one job
 
         :arg TaskWorker.DataObject.Task task: the task to work on
@@ -77,6 +79,7 @@ class PanDAInjection(PanDAAction):
         :arg str site: the borkered site where to run the jobs
         :arg str jobname: the job name
         :arg str lfnhanger: the random string to be added in the output file name
+        :arg list str allsites: all possible sites where the job can potentially run
         :arg int jobid: incremental job number
         :return: the sepc object."""
 
@@ -91,7 +94,7 @@ class PanDAInjection(PanDAAction):
         pandajob.prodDBlock = task['tm_input_dataset']
         pandajob.prodSourceLabel = 'user'
         pandajob.computingSite = site
-        pandajob.cloud = PandaServerInterface.PandaSites[pandajob.computingSite]['cloud']
+        pandajob.cloud = getSite(pandajob.computingSite)
         pandajob.destinationSE = 'local'
         pandajob.transformation = task['tm_transformation']
         ## need to initialize this
@@ -125,7 +128,7 @@ class PanDAInjection(PanDAAction):
             outjobpar[outputfile] = filespec.lfn
         for outputfile in task['tm_tfile_outfiles']:
             outfilestring += '%s,' % outputfile
-            filespec = outFileSpec(outfputile)
+            filespec = outFileSpec(outputfile)
             alloutfiles.append(filespec)
             #pandajob.addFile(filespec)
             outjobpar[outputfile] = filespec.lfn
@@ -141,18 +144,19 @@ class PanDAInjection(PanDAAction):
         for inputfile in job['input_files']:
             infiles.append( inputfile['lfn'] )
 
-        pandajob.jobParameters    = ''
-        pandajob.jobParameters    += '-a %s ' % task['tm_user_sandbox']
-        pandajob.jobParameters    += '--sourceURL %s ' % task['tm_cache_url']
-        pandajob.jobParameters    += '--jobNumber=%s ' % jobid
-        pandajob.jobParameters    += '--cmsswVersion=%s ' % task['tm_job_sw']
-        pandajob.jobParameters    += '--scramArch=%s ' % task['tm_job_arch']
-        pandajob.jobParameters    += '--inputFile=\'%s\' ' % json.dumps(infiles)
-        pandajob.jobParameters    += '--lumiMask=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
-        pandajob.jobParameters    += '-o "%s" ' % str(outjobpar)
-        pandajob.jobParameters    += '--dbs_url=%s ' % task['tm_dbs_url']
-        pandajob.jobParameters    += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']
-        pandajob.jobParameters    += '%s ' % task['tm_taskname'] #Needed by ASO
+        pandajob.jobParameters = '-a %s ' % task['tm_user_sandbox']
+        pandajob.jobParameters += '--sourceURL %s ' % task['tm_cache_url']
+        pandajob.jobParameters += '--jobNumber=%s ' % jobid
+        pandajob.jobParameters += '--cmsswVersion=%s ' % task['tm_job_sw']
+        pandajob.jobParameters += '--scramArch=%s ' % task['tm_job_arch']
+        pandajob.jobParameters += '--inputFile=\'%s\' ' % json.dumps(infiles)
+        pandajob.jobParameters += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
+        pandajob.jobParameters += '-o "%s" ' % str(outjobpar)
+        pandajob.jobParameters += '--dbs_url=%s ' % task['tm_dbs_url']
+        pandajob.jobParameters += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']
+        pandajob.jobParameters += '--publishFiles=%s ' % ('True' if task['tm_publication'] == 'T' else 'False')
+        pandajob.jobParameters += '--availableSites=\'%s\' ' %json.dumps(allsites)
+        pandajob.jobParameters += '%s ' % task['tm_taskname'] #Needed by ASO
 
         if 'panda_oldjobid' in job and job['panda_oldjobid']:
             pandajob.parentID = job['panda_oldjobid']
@@ -180,7 +184,7 @@ class PanDAInjection(PanDAAction):
                                         kwargs['task']['tm_publish_name'])
 
         for jobgroup in args[0]:
-            jobs, site = jobgroup.result
+            jobs, site, allsites = jobgroup.result
             blocks = [infile['block'] for infile in jobs.jobs[0]['input_files'] if infile['block']]
             # now try/except everything, then need to put the code in smaller try/except cages
             # note: there is already an outer try/except for every action and for the whole handler
@@ -189,8 +193,8 @@ class PanDAInjection(PanDAAction):
                     msg = "No site available for submission of task %s" %(kwargs['task'])
                     raise NoAvailableSite(msg)
 
-                jobgroupspecs, startjobid = self.makeSpecs(kwargs['task'], outdataset, jobs, site,
-                                                           jobset, jobdef, startjobid, basejobname, lfnhanger)
+                jobgroupspecs, startjobid = self.makeSpecs(kwargs['task'], outdataset, jobs, site, jobset, jobdef,
+                                                           startjobid, basejobname, lfnhanger, allsites)
                 jobsetdef = self.inject(kwargs['task'], jobgroupspecs)
                 outjobset = jobsetdef.keys()[0]
                 outjobdefs = jobsetdef[outjobset]

@@ -1,4 +1,4 @@
-import PandaServerInterface ## change this to specific imports
+from PandaServerInterface import getFullJobStatus
 
 from TaskWorker.Actions.PanDAAction import PanDAAction
 from TaskWorker.DataObjects.Result import Result
@@ -10,9 +10,6 @@ class PanDAgetSpecs(PanDAAction):
 
     def execute(self, *args, **kwargs):
         self.logger.info("Getting already existing specs ")
-        status, pandaspecs = PandaServerInterface.getFullJobStatus(ids=kwargs['task']['resubmit_ids'],
-                                                                   user=kwargs['task']['tm_user_dn'],
-                                                                   vo=kwargs['task']['tm_user_vo'],
-                                                                   group=kwargs['task']['tm_user_group'],
-                                                                   role=kwargs['task']['tm_user_role'])
+        status, pandaspecs = getFullJobStatus(ids=kwargs['task']['resubmit_ids'],
+                                              proxy=kwargs['task']['user_proxy'])
         return Result(task=kwargs['task'], result=pandaspecs)

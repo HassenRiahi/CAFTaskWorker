@@ -20,14 +20,13 @@ class DataDiscovery(TaskAction):
         """Receives as input the result of the data location
            discovery operations and fill up the WMCore objects."""
         self.logger.info(" Formatting data discovery output ") ## to become debug
-  
+
         # TEMPORARY
         secmsmap = {}
         sbj = SiteDBJSON()
- 
+
         wmfiles = []
         lumicounter = evecounter = 0
-
         for lfn, infos in datasetfiles.iteritems():
             wmfile = File(lfn=lfn, events=infos['NumberOfEvents'], size=infos['Size'], checksums=infos['Checksums'])
             wmfile['block'] = infos['BlockName']
@@ -41,7 +40,10 @@ class DataDiscovery(TaskAction):
                         self.logger.error("Impossible translating %s to a CMS name through SiteDB" %se)
                         secmsmap[se] = ''
                 if se in secmsmap:
-                    wmfile['locations'].extend(secmsmap[se])
+                    if type(secmsmap[se]) == list:
+                        wmfile['locations'].extend(secmsmap[se])
+                    else:
+                        wmfile['locations'].append(secmsmap[se])
             wmfile['workflow'] = requestname
             evecounter += infos['NumberOfEvents']
             for run, lumis in infos['Lumis'].iteritems():
