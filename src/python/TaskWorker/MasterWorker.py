@@ -2,10 +2,9 @@
 import time
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 
 from WMCore.Configuration import loadConfigurationFile, Configuration
-
-from logging.handlers import RotatingFileHandler
 
 from TaskWorker.DataObjects.Task import Task
 from TaskWorker.Worker import Worker
