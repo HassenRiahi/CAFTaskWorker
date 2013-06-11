@@ -9,7 +9,6 @@ config = Configuration()
 config.section_("Services")
 config.Services.PanDAurl = 'https://pandaserver.cern.ch:8888'
 config.Services.PhEDExurl = 'https://phedex.cern.ch'
-#config.Services.DBSUrl = 'https://cmsweb.cern.ch/dbs/dev/global/DBSReader'
 config.Services.DBSUrl = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
 config.Services.MyProxy = 'myproxy.cern.ch'
 
