@@ -37,6 +37,8 @@ class PanDASpecs2Jobs(PanDAAction):
         self.logger.info("Transforming old specs into jobs.")
 
         regroupjobs = {}
+        self.logger.error(str(kwargs['task']))
+        self.logger.error(str(args))
         ## grouping in a dictionary can happen here
         for job in args[0]:
             if job.jobDefinitionID in regroupjobs:
