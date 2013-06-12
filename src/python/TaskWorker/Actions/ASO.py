@@ -143,7 +143,25 @@ def resolvePFNs(source_site, dest_site, source_dir, dest_dir, filenames):
         results.append((dest_info[source_site, slfn], dest_info[dest_site, dlfn]))
     return results
 
+def fix_perms(count):
+    """
+    HTCondor will default to a umask of 0077 for stdout/err.  When the DAG finishes,
+    the schedd will chown the sandbox to the user which runs HTCondor.
+
+    This prevents the user who owns the DAGs from retrieving the job output as they
+    are no longer world-readable.
+    """
+    for base_file in ["job_err", "job_out"]:
+        try:
+            os.chown("%s.%s" % (base_file, count))
+        except OSError, oe:
+            if oe.errno != errno.ENOENT and oe.errno != errno.EPERM:
+                raise
+
 def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, **kwargs):
+
+    # Fix permissions of output files.
+    fix_perms(count)
 
     # Here's the magic.  Pull out the site the job ran at from its user log
     if 'source_site' not in kwargs:
