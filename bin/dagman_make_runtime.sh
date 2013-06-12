@@ -79,7 +79,7 @@ fi
 if [[ -d "$REPLACEMENT_ABSOLUTE/CAFTaskWorker" ]]; then
     echo "Using replacement CAFTaskWorker source at $REPLACEMENT_ABSOLUTE/CAFTaskWorker"
     TASKWORKER_PATH="$REPLACEMENT_ABSOLUTE/CAFTaskWorker"
-else:
+else
     curl -L https://github.com/$TASKWORKERREPO/CAFTaskWorker/archive/$TASKWORKERVER.tar.gz | tar zx || exit 2
     TASKWORKER_PATH="CAFTaskWorker-$TASKWORKERVER"
 fi
