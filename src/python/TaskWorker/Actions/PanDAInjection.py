@@ -155,6 +155,7 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters += '--dbs_url=%s ' % task['tm_dbs_url']
         pandajob.jobParameters += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']
         pandajob.jobParameters += '--publishFiles=%s ' % ('True' if task['tm_publication'] == 'T' else 'False')
+        pandajob.jobParameters += '--saveLogs=%s ' % ('True' if task['tm_save_logs'] == 'T' else 'False')
         pandajob.jobParameters += '--availableSites=\'%s\' ' %json.dumps(allsites)
         pandajob.jobParameters += '%s ' % task['tm_taskname'] #Needed by ASO
 

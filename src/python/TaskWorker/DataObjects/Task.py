@@ -60,6 +60,8 @@ class Task(dict):
         self['resubmit_ids'] = extraargs['resubmitList'] if 'resubmitList' in extraargs else []
         self['kill_ids'] = extraargs['killList'] if 'killList' in extraargs else []
         self['kill_all'] = extraargs['killAll'] if 'killAll' in extraargs else False
+        self['panda_resubmitted_jobs'] = literal_eval(task[32])
+        self['tm_save_logs'] = task[33]
 
     def __str__(self):
         """Use me to avoiding to vomiting all parameters around.
