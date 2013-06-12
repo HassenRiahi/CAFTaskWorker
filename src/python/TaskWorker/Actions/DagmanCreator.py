@@ -149,7 +149,7 @@ def escape_strings_to_classads(input):
     """
     info = {}
     for var in 'workflow', 'jobtype', 'jobsw', 'jobarch', 'inputdata', 'splitalgo', 'algoargs', \
-           'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publishdbsurl', \
+           'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publish_dbsurl', \
            'userdn', 'requestname', 'publish':
         val = input[var]
         if val == None:
@@ -174,7 +174,9 @@ def escape_strings_to_classads(input):
     info['algoargs'] = '"' + json.dumps({'halt_job_on_file_boundaries': False, 'splitOnRun': False, splitArgName : input['algoargs']}).replace('"', r'\"') + '"'
     info['attempt'] = 0
 
-    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest"]:
+    info['available_sites_flatten'] = '%s' % ", ".join(input['available_sites'])
+
+    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest", "dbsurl", "publish_dbsurl"]:
         info[var+"_flatten"] = input[var]
 
     # TODO: PanDA wrapper wants some sort of dictionary.

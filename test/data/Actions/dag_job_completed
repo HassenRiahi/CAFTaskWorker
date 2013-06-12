@@ -148,3 +148,4 @@ x509UserProxyFQAN = "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=bbockelm/CN=659
 CRAB_BlacklistT1 = 1
 LastJobStatus = 2
 JobCurrentStartExecutingDate = 1370875533
+CRAB_OutputData = "/GenericTTbar/bbockelm-PubValDebugPoc3_2-e77b030ac4a40fc7aed30f5326068e7f/USER"

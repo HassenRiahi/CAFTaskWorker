@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+import errno
 import signal
 import commands
 
@@ -17,22 +18,27 @@ import WMCore.Services.PhEDEx.PhEDEx as PhEDEx
 
 import AdderCmsPlugin
 
+from WMCore.Configuration import Configuration
 adder_config = Configuration()
 adder_config.section_("Adder")
-adder_config.logfile = "./aso.log"
+adder_config.Adder.logfile = "./aso.log"
 # TODO: Figure out how we will bootstrap auth
-adder_config.authfile = os.path.expanduser("~/aso_auth_file.txt")
+adder_config.Adder.authfile = os.path.expanduser("~/aso_auth_file.txt")
+adder_config.Adder.skipcache = True
+# Insert our config file into the Adder plugin
+AdderCmsPlugin.config = adder_config
 
 fake_results = False
 
 # The next three classes are used to mock-up the interaction necessary for AdderCmsPlugin
 class FakeFile:
 
-    def __init__(self, lfn, fsize, checksum, type):
+    def __init__(self, lfn, fsize, checksum, type, dest_site):
         self.lfn = lfn
         self.fsize = fsize
         self.checksum = checksum
         self.type = type
+        self.destinationSE = dest_site
 
 
 class FakeJob:
@@ -41,13 +47,12 @@ class FakeJob:
         self.jobStatus = "success"
         self.metadata = fjr_json
         self.PandaID = id
-        self.Files = {}
+        self.Files = []
         self.jobParameters = str(job_args)
         self.destinationDBlock = publish_dataset
         self.computingSite = computingSite
         self.prodUserID = dn
         self.prodDBlock = input_dataset
-        self.result = FakeResult()
 
     def addFile(self, file):
         self.Files.append(file)
@@ -73,12 +78,14 @@ def fix_perms(count):
     """
     for base_file in ["job_err", "job_out"]:
         try:
-            os.chown("%s.%s" % (base_file, count))
+            os.chmod("%s.%s" % (base_file, count), 0644)
         except OSError, oe:
             if oe.errno != errno.ENOENT and oe.errno != errno.EPERM:
                 raise
 
 def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, **kwargs):
+
+    print "LFNs for async stageout: %s" % ", ".join(filenames)
 
     # Fix permissions of output files.
     fix_perms(count)
@@ -108,10 +115,10 @@ def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, *
         job_ad = schedd.query('(CRAB_Id =?= %s) && (CRAB_ReqName =?= %s) && (CRAB_JobType =?= "Analysis")' % (my_ad['CRAB_Id'], my_ad.lookup('CRAB_ReqName')))
 
     fjr_json = ""
-    json_filename = "jobReport.json.%s"
+    json_filename = "jobReport.json.%(id)s"
     if fake_results:
         json_filename = os.path.join(os.environ['CRAB3_TEST_BASE'], "test/data/Actions/dag_job_completed_json")
-    with open(json_filename % job_ad['CRAB_Id']) as fd:
+    with open(json_filename % {'id': job_ad['CRAB_Id']}) as fd:
         fjr_json = fd.read()
 
     job = FakeJob("%s.%s" % (job_ad['ClusterID'], job_ad['ProcID']),
@@ -132,11 +139,13 @@ def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, *
     for idx in range(len(filenames)):
         outfile = filenames[idx]
         size = sizes[idx]
-        fakefile = FakeFile(os.path.join(dest_dir, outfile),
-                            size, "", "output")
+        fakefile = FakeFile(os.path.join(source_dir, outfile),
+                            size, "", "output", dest_site)
         job.addFile(fakefile)
 
     plugin = AdderCmsPlugin.AdderCmsPlugin(job)
+    plugin.job = job
+    plugin.result = FakeResult()
 
     plugin.execute()
 

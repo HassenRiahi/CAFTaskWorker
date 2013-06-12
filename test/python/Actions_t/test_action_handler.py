@@ -98,7 +98,7 @@ class TestActionHandler(unittest.TestCase):
         result = handler.actionWork(*action_args)
 
     def testASOServer(self):
-        TaskWorker.Actions.ASOServer.async_stageout("T2_US_Nebraska", '/store/user/bbockelm/crab_bbockelm_crab3_1', '/store/user/bbockelm', '1', 'dumper_111.root', source_site='T2_US_Nebraska')
+        TaskWorker.Actions.ASOServer.async_stageout("T2_US_Vanderbilt", '/store/temp/user/bbockelm/crab_bbockelm_crab3_1', '/store/user/bbockelm', '1', '1234.5', 'dumper_111.root', source_site='T2_US_Nebraska')
 
 
 if __name__ == '__main__':

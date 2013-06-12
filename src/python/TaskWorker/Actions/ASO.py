@@ -160,6 +160,8 @@ def fix_perms(count):
 
 def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, **kwargs):
 
+    print "Filenames for stageout: %s" % ", ".join(filenames)
+
     # Fix permissions of output files.
     fix_perms(count)
 
