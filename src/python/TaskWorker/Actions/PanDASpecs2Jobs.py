@@ -1,8 +1,6 @@
 from WMCore.DataStructs.JobGroup import JobGroup as WMJobGroup
 from WMCore.DataStructs.Job import Job as WMJob
 
-import PandaServerInterface ## change this to specific imports
-
 from TaskWorker.DataObjects.Result import Result
 from TaskWorker.Actions.PanDAAction import PanDAAction
 

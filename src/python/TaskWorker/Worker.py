@@ -43,7 +43,7 @@ def processWorker(inputs, results, instance):
             outputs = Result(task=task, err=str(we))
         except Exception, exc:
             outputs = Result(task=task, err=str(exc))
-            msg = "%s: I just had a failure for " % (procName, str(exc))
+            msg = "%s: I just had a failure for %s" % (procName, str(exc))
             msg += "\n\tworkid=" + str(workid)
             msg += "\n\ttask=" + str(task['tm_taskname'])
             msg += "\n" + str(traceback.format_exc())
