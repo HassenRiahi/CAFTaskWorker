@@ -56,13 +56,11 @@ class PanDASpecs2Jobs(PanDAAction):
                 parser.add_option('--jobNumber', dest='jobnum', type='int')
                 (options, args) = parser.parse_args(shlex.split(job.jobParameters))
                 jj = WMJob()
-                def hack(site):
-                    return site.split('_', 1)[-1]
                 jj['input_files'] = []
                 for infile in literal_eval(options.inputfiles):
                     jj['input_files'].append({'lfn': infile,
                                               'block': 'unknown',
-                                              'locations': [hack(ss) for ss in literal_eval(options.allsites)]})
+                                              'locations': [ss for ss in literal_eval(options.allsites)]})
                 jj['mask']['runAndLumis'] = literal_eval(options.runlumis)
                 jj['panda_oldjobid'] = job.PandaID
                 jj['jobnum'] = options.jobnum
