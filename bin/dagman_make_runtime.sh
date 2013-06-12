@@ -103,7 +103,7 @@ if [[ -d "$REPLACEMENT_ABSOLUTE/CRABClient" ]]; then
     CRABCLIENT_PATH="$REPLACEMENT_ABSOLUTE/CRABClient"
 else
     curl -L https://github.com/$CRABCLIENTREPO/CRABClient/archive/$CRABCLIENTVER.tar.gz | tar zx || exit 2
-    CRABCLIENT_PATH="CRABCLient-$CRABCLIENTVER"
+    CRABCLIENT_PATH="CRABClient-$CRABCLIENTVER"
 fi
 
 curl -L https://httplib2.googlecode.com/files/httplib2-0.8.tar.gz | tar zx || exit 2
@@ -131,7 +131,6 @@ pushd DLS-$DLSVER/Client/LFCClient
 zip -r $STARTDIR/CRAB3.zip *.py || exit 3
 popd
 
-pwd
 pushd $CRABCLIENT_PATH/src/python
 zip -r $STARTDIR/CRAB3.zip CRABClient || exit 3
 cp ../../bin/crab $STARTDIR/
