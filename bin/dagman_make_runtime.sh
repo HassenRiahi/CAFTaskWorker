@@ -131,6 +131,7 @@ pushd DLS-$DLSVER/Client/LFCClient
 zip -r $STARTDIR/CRAB3.zip *.py || exit 3
 popd
 
+pwd
 pushd $CRABCLIENT_PATH/src/python
 zip -r $STARTDIR/CRAB3.zip CRABClient || exit 3
 cp ../../bin/crab $STARTDIR/
