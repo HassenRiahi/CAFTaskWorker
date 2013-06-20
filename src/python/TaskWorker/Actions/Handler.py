@@ -3,6 +3,7 @@ import time
 import traceback
 
 from TaskWorker.Actions.DBSDataDiscovery import DBSDataDiscovery
+from TaskWorker.Actions.MakeFakeFileSet import MakeFakeFileSet
 from TaskWorker.Actions.Splitter import Splitter
 from TaskWorker.Actions.PanDABrokerage import PanDABrokerage
 from TaskWorker.Actions.PanDAInjection import PanDAInjection
@@ -77,7 +78,10 @@ def handleNewTask(config, task, *args, **kwargs):
     :return: the handler."""
     handler = TaskHandler(task)
     handler.addWork( MyProxyLogon(config=config, myproxylen=60*60*24) )
-    handler.addWork( DBSDataDiscovery(config=config) )
+    if task['tm_job_type'] == 'Analysis': 
+        handler.addWork( DBSDataDiscovery(config=config) )
+    elif task['tm_job_type'] == 'PrivateMC': 
+        handler.addWork( MakeFakeFileSet(config=config) )
     handler.addWork( Splitter(config=config) )
 
     def glidein(config):

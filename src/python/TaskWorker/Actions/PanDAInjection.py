@@ -157,7 +157,9 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters += '--cmsswVersion=%s ' % task['tm_job_sw']
         pandajob.jobParameters += '--scramArch=%s ' % task['tm_job_arch']
         pandajob.jobParameters += '--inputFile=\'%s\' ' % json.dumps(infiles)
-        pandajob.jobParameters += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
+
+        self.jobParametersSetting(pandajob, job, self.jobtypeMapper[task['tm_job_type']])
+
         pandajob.jobParameters += '-o "%s" ' % str(outjobpar)
         pandajob.jobParameters += '--dbs_url=%s ' % task['tm_dbs_url']
         pandajob.jobParameters += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']
@@ -175,6 +177,25 @@ class PanDAInjection(PanDAAction):
 
         return pandajob
 
+
+    def jobParametersSetting(self, pandajob, job, jobtype):
+        """ setup jobtype specific fraction of the jobParameters """
+
+        if jobtype == 'Analysis':
+            pandajob.jobParameters += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
+        elif jobtype == 'Production':
+            # The following two are hardcoded currently.
+            # we expect they will be used/useful in the near future
+            pandajob.jobParameters += '--seeding=\'%s\' ' % 'AutomaticSeeding'
+            pandajob.jobParameters += '--lheInputFiles=\'%s\' ' % 'None'
+            #
+            pandajob.jobParameters += '--firstEvent=\'%s\' ' % job['mask']['FirstEvent']
+            pandajob.jobParameters += '--lastEvent=\'%s\' ' % job['mask']['LastEvent']
+            pandajob.jobParameters += '--firstLumi=\'%s\' ' % job['mask']['FirstLumi']
+            pandajob.jobParameters += '--firstRun=\'%s\' ' % job['mask']['FirstRun']
+        elif jobtype == 'Generic':
+            self.logger.info('Generic JobType not yet supported')
+
     def execute(self, *args, **kwargs):
         self.logger.info(" create specs and inject into PanDA ")
         results = []
@@ -187,7 +208,12 @@ class PanDAInjection(PanDAAction):
         basejobname = "%s" % commands.getoutput('uuidgen')
         lfnhanger = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(LFNHANGERLEN))
         ## /<primarydataset>/<yourHyperNewsusername>-<publish_data_name>-<PSETHASH>/USER
-        outdataset = '/%s/%s-%s/USER' %(kwargs['task']['tm_input_dataset'].split('/')[1],
+        if kwargs['task']['tm_input_dataset']:
+            primaryDS = kwargs['task']['tm_input_dataset'].split('/')[1]
+        else:
+            primaryDS = '-'.join(kwargs['task']['tm_publish_name'].split('-')[:-1])
+
+        outdataset = '/%s/%s-%s/USER' %(primaryDS,
                                         kwargs['task']['tm_username'],
                                         kwargs['task']['tm_publish_name'])
         alloldids = kwargs['task']['panda_resubmitted_jobs']

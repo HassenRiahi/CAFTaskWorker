@@ -8,15 +8,17 @@ from TaskWorker.Actions.TaskAction import TaskAction
 from TaskWorker.DataObjects.Result import Result
 from TaskWorker.WorkerExceptions import StopHandler
 
-
 class Splitter(TaskAction):
     """Performing the split operation depending on the
        recevied input and arguments"""
 
     def execute(self, *args, **kwargs):
+
         wmwork = Workflow(name=kwargs['task']['tm_taskname'])
+
         wmsubs = Subscription(fileset=args[0], workflow=wmwork,
-                              split_algo=kwargs['task']['tm_split_algo'], type="Processing")
+                               split_algo=kwargs['task']['tm_split_algo'],
+                               type=self.jobtypeMapper[kwargs['task']['tm_job_type']])
         splitter = SplitterFactory()
         jobfactory = splitter(subscription=wmsubs)
         splitparam = kwargs['task']['tm_split_args']

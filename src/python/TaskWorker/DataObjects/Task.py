@@ -36,32 +36,33 @@ class Task(dict):
         self['tm_site_blacklist'] = literal_eval(task[11])
         self['tm_split_algo'] = task[12]
         self['tm_split_args'] = literal_eval(task[13])
-        self['tm_user_sandbox'] = task[14]
-        self['tm_cache_url'] = task[15]
-        self['tm_username'] = task[16]
-        self['tm_user_dn'] = task[17]
-        self['tm_user_vo'] = task[18]
-        self['tm_user_role'] = task[19]
-        self['tm_user_group'] = task[20]
-        self['tm_publish_name'] = task[21]
-        self['tm_asyncdest'] = task[22]
-        self['tm_dbs_url'] = task[23]
-        self['tm_publish_dbs_url'] = task[24]
-        self['tm_publication'] = task[25]
-        self['tm_outfiles'] = literal_eval(task[26])
-        self['tm_tfile_outfiles'] = literal_eval(task[27])
-        self['tm_edm_outfiles'] = literal_eval(task[28])
-        self['tm_transformation'] = task[29]
-        self['tm_job_type'] = task[30] 
+        self['tm_totalunits'] = task[14]
+        self['tm_user_sandbox'] = task[15]
+        self['tm_cache_url'] = task[16]
+        self['tm_username'] = task[17]
+        self['tm_user_dn'] = task[18]
+        self['tm_user_vo'] = task[19]
+        self['tm_user_role'] = task[20]
+        self['tm_user_group'] = task[21]
+        self['tm_publish_name'] = task[22]
+        self['tm_asyncdest'] = task[23]
+        self['tm_dbs_url'] = task[24]
+        self['tm_publish_dbs_url'] = task[25]
+        self['tm_publication'] = task[26]
+        self['tm_outfiles'] = literal_eval(task[27])
+        self['tm_tfile_outfiles'] = literal_eval(task[28])
+        self['tm_edm_outfiles'] = literal_eval(task[29])
+        self['tm_transformation'] = task[30]
+        self['tm_job_type'] = task[31] 
         ## We load the arguments one by one here to avoid suprises at a later stage
-        extraargs = literal_eval(task[31])
+        extraargs = literal_eval(task[32])
         self['resubmit_site_whitelist'] = extraargs['siteWhiteList'] if 'siteWhiteList' in extraargs else []
         self['resubmit_site_blacklist'] = extraargs['siteBlackList'] if 'siteBlackList' in extraargs else []
         self['resubmit_ids'] = extraargs['resubmitList'] if 'resubmitList' in extraargs else []
         self['kill_ids'] = extraargs['killList'] if 'killList' in extraargs else []
         self['kill_all'] = extraargs['killAll'] if 'killAll' in extraargs else False
-        self['panda_resubmitted_jobs'] = literal_eval(task[32])
-        self['tm_save_logs'] = task[33]
+        self['panda_resubmitted_jobs'] = literal_eval(task[33])
+        self['tm_save_logs'] = task[34]
 
     def __str__(self):
         """Use me to avoiding to vomiting all parameters around.
