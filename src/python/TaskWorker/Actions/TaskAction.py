@@ -1,7 +1,7 @@
 import logging
 
 class TaskAction(object):
-    """The abstract father of all actions"""
+    """The ABC of all actions"""
 
     def __init__(self, config):
         self.logger = logging.getLogger(type(self).__name__)
