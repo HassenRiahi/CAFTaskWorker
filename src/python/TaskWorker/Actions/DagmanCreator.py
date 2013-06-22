@@ -95,12 +95,12 @@ CRAB_Id = $(count)
 job_ad_information_attrs = MATCH_EXP_JOBGLIDEIN_CMSSite, JOBGLIDEIN_CMSSite
 
 universe = vanilla
-Executable = gWMS-CMSRunAnaly.sh
+Executable = gWMS-CMSRunAnalysis.sh
 Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
 Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqName)"
-transfer_input_files = CMSRunAnaly.sh, cmscp.py
+transfer_input_files = CMSRunAnalysis.sh, cmscp.py
 transfer_output_files = jobReport.json.$(count)
 Environment = SCRAM_ARCH=$(CRAB_JobArch)
 should_transfer_files = YES
@@ -270,7 +270,7 @@ def create_subdag(splitter_result, **kwargs):
 
     outfiles = kwargs['task']['tm_outfiles'] + kwargs['task']['tm_tfile_outfiles'] + kwargs['task']['tm_edm_outfiles']
 
-    os.chmod("CMSRunAnaly.sh", 0755)
+    os.chmod("CMSRunAnalysis.sh", 0755)
 
     #fixedsites = set(self.config.Sites.available)
     for jobgroup in splitter_result:
@@ -369,7 +369,7 @@ class DagmanCreator(TaskAction.TaskAction):
 
             transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
-            gwms_location = getLocation('gWMS-CMSRunAnaly.sh', 'CAFTaskWorker/bin/')
+            gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
             bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
 
             cwd = os.getcwd()

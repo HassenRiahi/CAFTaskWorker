@@ -181,7 +181,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
         cwd = os.getcwd()
         os.chdir(tempDir)
 
-        inputFiles = ['gWMS-CMSRunAnaly.sh', task['tm_transformation'], 'cmscp.py', 'RunJobs.dag']
+        inputFiles = ['gWMS-CMSRunAnalysis.sh', task['tm_transformation'], 'cmscp.py', 'RunJobs.dag']
         inputFiles += [i for i in os.listdir('.') if i.startswith('Job.submit')]
         info['inputFilesString'] = ", ".join(inputFiles)
         outputFiles = ["RunJobs.dag.dagman.out", "RunJobs.dag.rescue.001"]

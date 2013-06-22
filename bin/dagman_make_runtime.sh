@@ -36,7 +36,7 @@ CRABCLIENTVER=3.2.0pre2-dagman3
 CRABCLIENTREPO=bbockelm
 [[ -d $STARTDIR ]] || mkdir -p $STARTDIR
 
-cp $BASEDIR/gWMS-CMSRunAnaly.sh $STARTDIR || exit 3
+cp $BASEDIR/gWMS-CMSRunAnalysis.sh $STARTDIR || exit 3
 
 
 rm -rf $WMCOREDIR && mkdir -p $WMCOREDIR
@@ -169,10 +169,10 @@ touch lib/fake_condor_config
 
 mkdir -p bin
 cp $CRABSERVER_PATH/bin/* bin/
-cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnaly.sh bin/
+cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis.sh bin/
 
-tar zcf $ORIGDIR/TaskManagerRun.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnaly.sh bin || exit 4
-tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnaly.sh bin lib || exit 4
+tar zcf $ORIGDIR/TaskManagerRun.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin || exit 4
+tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin lib || exit 4
 
 popd
 
