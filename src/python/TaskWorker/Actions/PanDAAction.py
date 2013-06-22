@@ -12,3 +12,6 @@ class PanDAAction(TaskAction):
         TaskAction.__init__(self, pandaconfig)
         ## TODO check some specific config? otherwise this can probably be removed  and default init could be used
         #print "specific panda action init", self
+
+    def translateSiteName(self, sites):
+        return ['ANALY_'+ s for s in sites]

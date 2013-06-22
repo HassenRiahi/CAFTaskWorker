@@ -11,5 +11,5 @@ export PYTHONPATH=$CRAB3_CHECKOUT/CAFTaskWorker/src/python:$CRAB3_CHECKOUT/WMCor
 export PYTHONPATH=$CRAB3_CHECKOUT/CAFTaskWorker/test/python:$PYTHONPATH
 export PYTHONPATH=$CRAB3_CHECKOUT/AsyncStageout/src/python/AsyncStageOut/ExternalPlugins/PandaPlugin:$PYTHONPATH
 
-exec python2.6 -m Actions_t/test_action_handler "$@"
+exec python2.6 "$@"
 

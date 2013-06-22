@@ -8,7 +8,7 @@ from TaskWorker.Actions.PanDABrokerage import PanDABrokerage
 from TaskWorker.Actions.PanDAInjection import PanDAInjection
 from TaskWorker.Actions.PanDAgetSpecs import PanDAgetSpecs
 from TaskWorker.Actions.PanDAKill import PanDAKill
-from TaskWorker.Actions.Specs2Jobs import Specs2Jobs
+from TaskWorker.Actions.PanDASpecs2Jobs import PanDASpecs2Jobs
 from TaskWorker.Actions.MyProxyLogon import MyProxyLogon
 from TaskWorker.WorkerExceptions import WorkerHandlerException, StopHandler
 from TaskWorker.DataObjects.Result import Result
@@ -114,7 +114,7 @@ def handleResubmit(config, task, *args, **kwargs):
         """Performs the re-injection into PanDA
         :arg WMCore.Configuration config: input configuration"""
         handler.addWork( PanDAgetSpecs(pandaconfig=config) )
-        handler.addWork( Specs2Jobs(config=config) )
+        handler.addWork( PanDASpecs2Jobs(pandaconfig=config) )
         handler.addWork( PanDABrokerage(pandaconfig=config) )
         handler.addWork( PanDAInjection(pandaconfig=config) )
 

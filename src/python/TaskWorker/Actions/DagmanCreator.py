@@ -58,6 +58,7 @@ CRAB_HEADERS = \
 +CRAB_JobSW = %(jobsw)s
 +CRAB_JobArch = %(jobarch)s
 +CRAB_InputData = %(inputdata)s
++CRAB_OutputData = %(publishname)s
 +CRAB_ISB = %(cacheurl)s
 +CRAB_SiteBlacklist = %(siteblacklist)s
 +CRAB_SiteWhitelist = %(sitewhitelist)s
@@ -71,6 +72,7 @@ CRAB_HEADERS = \
 +CRAB_BlacklistT1 = %(blacklistT1)s
 """
 
+# NOTE: keep Arugments in sync with PanDAInjection.py.  ASO is very picky about argument order.
 JOB_SUBMIT = CRAB_HEADERS + \
 """
 CRAB_Attempt = %(attempt)d
@@ -79,6 +81,11 @@ CRAB_AdditionalOutputFiles = %(addoutputfiles_flatten)s
 CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
+CRAB_ReqName = %(requestname_flatten)s
+CRAB_DBSURL = %(dbsurl_flatten)s
+CRAB_PublishDBSURL = %(publish_dbsurl_flatten)s
+CRAB_Publish = %(publish)s
+CRAB_AvailableSites = %(available_sites_flatten)s
 CRAB_Id = $(count)
 +CRAB_Id = $(count)
 +CRAB_Dest = "cms://%(temp_dest)s"
@@ -92,7 +99,7 @@ Executable = gWMS-CMSRunAnaly.sh
 Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
-Arguments = "-o $(CRAB_AdditionalOutputFiles) -a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) --jobNumber=$(CRAB_Id)"
+Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqName)"
 transfer_input_files = CMSRunAnaly.sh, cmscp.py
 transfer_output_files = jobReport.json.$(count)
 Environment = SCRAM_ARCH=$(CRAB_JobArch)
@@ -142,8 +149,8 @@ def escape_strings_to_classads(input):
     """
     info = {}
     for var in 'workflow', 'jobtype', 'jobsw', 'jobarch', 'inputdata', 'splitalgo', 'algoargs', \
-           'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publishdbsurl', \
-           'userdn', 'requestname':
+           'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publish_dbsurl', \
+           'userdn', 'requestname', 'publish':
         val = input[var]
         if val == None:
             info[var] = 'undefined'
@@ -167,7 +174,9 @@ def escape_strings_to_classads(input):
     info['algoargs'] = '"' + json.dumps({'halt_job_on_file_boundaries': False, 'splitOnRun': False, splitArgName : input['algoargs']}).replace('"', r'\"') + '"'
     info['attempt'] = 0
 
-    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest"]:
+    info['available_sites_flatten'] = '%s' % ", ".join(input['available_sites'])
+
+    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest", "dbsurl", "publish_dbsurl"]:
         info[var+"_flatten"] = input[var]
 
     # TODO: PanDA wrapper wants some sort of dictionary.
@@ -203,6 +212,7 @@ def makeJobSubmit(task):
     info['asyncdest'] = info['tm_asyncdest']
     info['dbsurl'] = info['tm_dbs_url']
     info['publishdbsurl'] = info['tm_publish_dbs_url']
+    info['publish'] = info['tm_publication']
     info['userdn'] = info['tm_user_dn']
     info['requestname'] = task['tm_taskname']
     info['savelogsflag'] = 0

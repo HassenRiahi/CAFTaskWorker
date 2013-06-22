@@ -1,4 +1,5 @@
 from multiprocessing import cpu_count
+import socket
 
 from WMCore.Configuration import Configuration
 
@@ -8,11 +9,11 @@ config = Configuration()
 config.section_("Services")
 config.Services.PanDAurl = 'https://pandaserver.cern.ch:8888'
 config.Services.PhEDExurl = 'https://phedex.cern.ch'
-#config.Services.DBSUrl = 'https://cmsweb.cern.ch/dbs/dev/global/DBSReader'
 config.Services.DBSUrl = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
 config.Services.MyProxy = 'myproxy.cern.ch'
 
 config.section_("TaskWorker")
+config.TaskWorker.name = socket.getfqdn().lower()
 config.TaskWorker.polling = 60 #seconds
  # we can add one worker per core, plus some spare ones since most of actions wait for I/O
 config.TaskWorker.nslaves = cpu_count() + cpu_count()/2

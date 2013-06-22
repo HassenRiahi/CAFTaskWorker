@@ -15,10 +15,7 @@ class PanDAKill(PanDAAction):
         killed = []
         try:
             status, killed = killJobs(ids=kwargs['task']['kill_ids'],
-                                      user=kwargs['task']['tm_user_dn'],
-                                      vo=kwargs['task']['tm_user_vo'],
-                                      group=kwargs['task']['tm_user_group'],
-                                      role=kwargs['task']['tm_user_role'])
+                                      proxy=kwargs['task']['user_proxy'])
             notkilled = len([res for res in killed if not res])
             if notkilled > 0:
             #not reduce(lambda x, y: x and y, killed)
