@@ -81,9 +81,9 @@ CRAB_AdditionalOutputFiles = %(addoutputfiles_flatten)s
 CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
-CRAB_ReqName = %(requestname_flatten)s
+CRAB_ReqName = %(requestname)s
 CRAB_DBSURL = %(dbsurl_flatten)s
-CRAB_PublishDBSURL = %(publish_dbsurl_flatten)s
+CRAB_PublishDBSURL = %(publishdbsurl_flatten)s
 CRAB_Publish = %(publish)s
 CRAB_AvailableSites = %(available_sites_flatten)s
 CRAB_Id = $(count)
@@ -100,9 +100,9 @@ Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
 Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqName)"
-transfer_input_files = CMSRunAnalysis.sh, cmscp.py
+transfer_input_files = CMSRunAnalysis.sh, cmscp.py%(additional_input_files)s
 transfer_output_files = jobReport.json.$(count)
-Environment = SCRAM_ARCH=$(CRAB_JobArch)
+Environment = SCRAM_ARCH=$(CRAB_JobArch);%(additional_environment_options)s
 should_transfer_files = YES
 #x509userproxy = %(x509up_file)s
 use_x509userproxy = true
@@ -123,10 +123,10 @@ universe = local
 Executable = dag_bootstrap.sh
 Arguments = "ASO $(CRAB_AsyncDest) %(temp_dest)s %(output_dest)s $(count) $(Cluster).$(Process) cmsRun_$(count).log.tar.gz $(outputFiles)"
 Output = aso.$(count).out
-transfer_input_files = job_log.$(count), jobReport.json.$(count)
+transfer_input_files = job_log.$(count), jobReport.json.$(count)%(additional_input_files)s
 +TransferOutput = ""
 Error = aso.$(count).err
-Environment = PATH=/usr/bin:/bin
+Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
 use_x509userproxy true
 #x509userproxy = %(x509up_file)s
 leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
@@ -149,9 +149,9 @@ def escape_strings_to_classads(input):
     """
     info = {}
     for var in 'workflow', 'jobtype', 'jobsw', 'jobarch', 'inputdata', 'splitalgo', 'algoargs', \
-           'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publish_dbsurl', \
+           'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publishdbsurl', \
            'userdn', 'requestname', 'publish':
-        val = input[var]
+        val = input.get(var, None)
         if val == None:
             info[var] = 'undefined'
         else:
@@ -176,8 +176,8 @@ def escape_strings_to_classads(input):
 
     info['available_sites_flatten'] = '%s' % ", ".join(input['available_sites'])
 
-    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest", "dbsurl", "publish_dbsurl"]:
-        info[var+"_flatten"] = input[var]
+    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest", "dbsurl", "publishdbsurl"]:
+        info[var+"_flatten"] = input.get(var,'undefined')
 
     # TODO: PanDA wrapper wants some sort of dictionary.
     info["addoutputfiles_flatten"] = '{}'

@@ -46,18 +46,24 @@ rm -rf $DLSDIR && mkdir -p $DLSDIR
 rm -rf $CRABSERVERDIR && mkdir -p $CRABSERVERDIR
 rm -rf $CRABCLIENTDIR && mkdir -p $CRABCLIENTDIR
 
-if [[ -n "$CRAB3_OVERRIDE_SOURCE" ]]; then 
-    REPLACEMENT_ABSOLUTE=$(readlink -f $CRAB3_OVERRIDE_SOURCE)
+if [[ -n "$CRAB_OVERRIDE_SOURCE" ]]; then 
+    REPLACEMENT_ABSOLUTE=$(readlink -f $CRAB_OVERRIDE_SOURCE)
+elif [[ "x$1" != "x" ]]; then
+    REPLACEMENT_ABSOLUTE=$(readlink -f $1)
 else
     REPLACEMENT_ABSOLUTE=""
 fi
-
+# blow away old directories
+rm -rf $STARTDIR/*/
 pushd $STARTDIR
 
-curl -L http://cmsrep.cern.ch/cmssw/cms/RPMS/slc5_amd64_gcc462/external+py2-pyopenssl+0.11-1-1.slc5_amd64_gcc462.rpm > external+py2-pyopenssl+0.11-1-1.slc5_amd64_gcc462.rpm || exit 2
+
+if [[ ! -e external+py2-pyopenssl+0.11-1-1.slc5_amd64_gcc462.rpm ]]; then
+    curl -L http://cmsrep.cern.ch/cmssw/cms/RPMS/slc5_amd64_gcc462/external+py2-pyopenssl+0.11-1-1.slc5_amd64_gcc462.rpm > external+py2-pyopenssl+0.11-1-1.slc5_amd64_gcc462.rpm || exit 2
+fi
 rpm2cpio external+py2-pyopenssl+0.11-1-1.slc5_amd64_gcc462.rpm | cpio -uimd || exit 2
 
-if [[ -d "$REPLACEMENT_ABSOLUTE/CAFUtlities" ]]; then
+if [[ -d "$REPLACEMENT_ABSOLUTE/CAFUtilities" ]]; then
     echo "Using replacement CAFUtlities source at $REPLACEMENT_ABSOLUTE/CAFUtlities"
     CAFUTILITIES_PATH="$REPLACEMENT_ABSOLUTE/CAFUtilities"
 else
@@ -88,7 +94,11 @@ if [ ! -e $DBSVER.tar.gz ]; then
     curl -L https://github.com/$DBSREPO/DBS/archive/$DBSVER.tar.gz > $DBSVER.tar.gz || exit 2
 fi
 tar zxf $DBSVER.tar.gz || exit 2
-curl -L https://github.com/$DLSREPO/DLS/archive/$DLSVER.tar.gz | tar zx || exit 2
+
+if [[ ! -e dls.tar.gz ]]; then
+    curl -L https://github.com/$DLSREPO/DLS/archive/$DLSVER.tar.gz > dls.tar.gz || exit 2
+fi
+tar zxf dls.tar.gz || exit 2
 
 if [[ -d "$REPLACEMENT_ABSOLUTE/CRABServer" ]]; then
     echo "Using replacement CRABServer source at $REPLACEMENT_ABSOLUTE/CRABServer"
@@ -106,47 +116,59 @@ else
     CRABCLIENT_PATH="CRABClient-$CRABCLIENTVER"
 fi
 
-curl -L https://httplib2.googlecode.com/files/httplib2-0.8.tar.gz | tar zx || exit 2
-curl -L http://download.cherrypy.org/cherrypy/3.2.2/CherryPy-3.2.2.tar.gz | tar zx || exit 2
-curl -L https://pypi.python.org/packages/source/S/SQLAlchemy/SQLAlchemy-0.8.0.tar.gz | tar zx || exit 2
-curl -L http://hcc-briantest.unl.edu/CRAB3-condor-libs.tar.gz | tar zx *.so* || exit 2
+if [[ ! -e httplib2.tar.gz ]]; then
+    curl -L https://httplib2.googlecode.com/files/httplib2-0.8.tar.gz > httplib2.tar.gz || exit 2
+fi
+if [[ ! -e cherrypy.tar.gz ]]; then
+    curl -L http://download.cherrypy.org/cherrypy/3.2.2/CherryPy-3.2.2.tar.gz > cherrypy.tar.gz || exit 2
+fi
+if [[ ! -e sqlalchemy.tar.gz ]]; then
+    curl -L https://pypi.python.org/packages/source/S/SQLAlchemy/SQLAlchemy-0.8.0.tar.gz > sqlalchemy.tar.gz || exit 2
+fi
+if [[ ! -e crab3-condor-libs.tar.gz ]]; then
+    curl -L http://hcc-briantest.unl.edu/CRAB3-condor-libs.tar.gz > crab3-condor-libs.tar.gz || exit 2
+fi
+tar xzf httplib2.tar.gz || exit 2
+tar xzf cherrypy.tar.gz || exit 2
+tar xzf sqlalchemy.tar.gz || exit 2
+tar xzf crab3-condor-libs.tar.gz *.so* || exit 2
 
 pushd $WMCORE_PATH/src/python
-zip -r $STARTDIR/CRAB3.zip WMCore PSetTweaks || exit 3
+zip -rq $STARTDIR/CRAB3.zip WMCore PSetTweaks || exit 3
 popd
 
 pushd $TASKWORKER_PATH/src/python
-zip -r $STARTDIR/CRAB3.zip TaskWorker || exit 3
+zip -rq $STARTDIR/CRAB3.zip TaskWorker || exit 3
 popd
 
 pushd $CAFUTILITIES_PATH/src/python
-zip -r $STARTDIR/CRAB3.zip transform Databases PandaServerInterface.py || exit 3
+zip -rq $STARTDIR/CRAB3.zip transform Databases PandaServerInterface.py || exit 3
 popd
 
 pushd DBS-$DBSVER/Clients/Python
-zip -r $STARTDIR/CRAB3.zip DBSAPI || exit 3
+zip -rq $STARTDIR/CRAB3.zip DBSAPI || exit 3
 popd
 
 pushd DLS-$DLSVER/Client/LFCClient
-zip -r $STARTDIR/CRAB3.zip *.py || exit 3
+zip -rq $STARTDIR/CRAB3.zip *.py || exit 3
 popd
 
 pushd $CRABCLIENT_PATH/src/python
-zip -r $STARTDIR/CRAB3.zip CRABClient || exit 3
+zip -rq $STARTDIR/CRAB3.zip CRABClient || exit 3
 cp ../../bin/crab $STARTDIR/
 cp ../../bin/crab3 $STARTDIR/
 popd
 
 pushd $CRABSERVER_PATH/src/python
-zip -r $STARTDIR/CRAB3.zip CRABInterface || exit 3
+zip -rq $STARTDIR/CRAB3.zip CRABInterface || exit 3
 popd
 
 pushd httplib2-0.8/python2
-zip -r $STARTDIR/CRAB3.zip httplib2 || exit 3
+zip -rq $STARTDIR/CRAB3.zip httplib2 || exit 3
 popd
 
 pushd CherryPy-3.2.2/
-zip -r $STARTDIR/CRAB3.zip cherrypy || exit 3
+zip -rq $STARTDIR/CRAB3.zip cherrypy || exit 3
 popd
 
 pushd opt/cmssw/slc5_amd64_gcc462/external/py2-pyopenssl/0.11/lib/python2.6/site-packages
@@ -171,7 +193,9 @@ mkdir -p bin
 cp $CRABSERVER_PATH/bin/* bin/
 cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis.sh bin/
 
+echo "Making TaskManagerRun tarball"
 tar zcf $ORIGDIR/TaskManagerRun.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin || exit 4
+echo "Making CRAB3 client install"
 tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin lib || exit 4
 
 popd

@@ -8,7 +8,7 @@ from TaskWorker.DataObjects.Result import Result
 
 # TEMPORARY
 from WMCore.Services.SiteDB.SiteDB import SiteDBJSON
-
+import httplib
 
 class DataDiscovery(TaskAction):
     """I am the abstract class for the data discovery.
@@ -39,6 +39,8 @@ class DataDiscovery(TaskAction):
                     except KeyError, ke:
                         self.logger.error("Impossible translating %s to a CMS name through SiteDB" %se)
                         secmsmap[se] = ''
+                    except httplib.HTTPException, ex:
+                        self.logger.error("Couldn't map SE to site: %s" % se)
                 if se in secmsmap:
                     if type(secmsmap[se]) == list:
                         wmfile['locations'].extend(secmsmap[se])

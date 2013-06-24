@@ -58,7 +58,7 @@ on_exit_remove = ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 
 remove_kill_sig = SIGUSR1
 +HoldKillSig = "SIGUSR1"
 on_exit_hold = (ExitCode =!= UNDEFINED && ExitCode != 0)
-+Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId)
++Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId, " %(additional_environment_options)s")
 +RemoteCondorSetupa = "%(remote_condor_setup)s"
 +TaskType = "ROOT"
 X509UserProxy = %(userproxy)s
@@ -221,7 +221,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
         dagAd["OnExitRemove"] = classad.ExprTree("( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))")
         dagAd["OtherJobRemoveRequirements"] = classad.ExprTree("DAGManJobId =?= ClusterId")
         dagAd["RemoveKillSig"] = "SIGUSR1"
-        dagAd["Environment"] = classad.ExprTree('strcat("PATH=/usr/bin:/bin CONDOR_ID=", ClusterId, ".", ProcId)')
+        dagAd["Environment"] = classad.ExprTree('strcat("PATH=/usr/bin:/bin CONDOR_ID=", ClusterId, ".", ProcId," %s")' % info['additional_environment_options'])
         dagAd["RemoteCondorSetup"] = info['remote_condor_setup']
         dagAd["Requirements"] = classad.ExprTree('true || false')
         dagAd["TaskType"] = "ROOT"
