@@ -16,10 +16,10 @@ class PassThroughOptionParser(OptionParser):
     An unknown option pass-through implementation of OptionParser.
 
     When unknown arguments are encountered, bundle with largs and try again,
-    until rargs is depleted.  
+    until rargs is depleted.
 
     sys.exit(status) will still be called if a known argument is passed
-    incorrectly (e.g. missing arguments or bad argument types, etc.)        
+    incorrectly (e.g. missing arguments or bad argument types, etc.)
     """
     def _process_args(self, largs, rargs, values):
         while rargs:
@@ -63,7 +63,8 @@ class PanDASpecs2Jobs(PanDAAction):
                     jj['input_files'].append({'lfn': infile,
                                               'block': 'unknown',
                                               'locations': [ss for ss in literal_eval(options.allsites)]})
-                jj['mask']['runAndLumis'] = literal_eval(options.runlumis)
+                if options.runlumis:
+                    jj['mask']['runAndLumis'] = literal_eval(options.runlumis)
                 jj['panda_oldjobid'] = job.PandaID
                 jj['jobnum'] = options.jobnum
                 jg.add(jj)

@@ -181,7 +181,7 @@ class PanDAInjection(PanDAAction):
     def jobParametersSetting(self, pandajob, job, jobtype):
         """ setup jobtype specific fraction of the jobParameters """
 
-        if jobtype == 'Analysis':
+        if jobtype == 'Processing':
             pandajob.jobParameters += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
         elif jobtype == 'Production':
             # The following two are hardcoded currently.
