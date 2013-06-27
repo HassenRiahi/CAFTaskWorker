@@ -5,6 +5,8 @@ import os
 import re
 import sys
 import time
+import json
+import errno
 import signal
 import commands
 
@@ -153,7 +155,7 @@ def fix_perms(count):
     """
     for base_file in ["job_err", "job_out"]:
         try:
-            os.chown("%s.%s" % (base_file, count))
+            os.chmod("%s.%s" % (base_file, count),644)
         except OSError, oe:
             if oe.errno != errno.ENOENT and oe.errno != errno.EPERM:
                 raise
@@ -173,10 +175,19 @@ def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, *
             print "Failed to query condor user log:\n%s" % output
             return 1
         match_site, source_site = output.split('\n')[0].split(" ", 1)
-        # TODO: Testing mode.  If CMS site is not known, assume Nebraska
         if match_site == 'Unknown' or source_site == 'Unknown':
-            source_site = 'T2_US_Nebraska'
+            # Didn't find it the first time, try looking in the jobReport.json
+            report = json.loads(open('jobReport.json.%s' % count, 'r').read())
+            if report.get('executed_site', None):
+                print "Getting source_site from jobReport"
+                source_site = report['executed_site']
+            else:
+                # TODO: Testing mode. If nothing turns up, just say it wwas
+                #       Nebraska
+                print "Site was unknown, so we just guessed Nebraska ..."
+                source_site = 'T2_US_Nebraska'
     else:
+        print "Getting source_site from condor"
         source_site = kwargs['source_site']
 
     transfer_list = resolvePFNs(source_site, dest_site, source_dir, dest_dir, filenames)
