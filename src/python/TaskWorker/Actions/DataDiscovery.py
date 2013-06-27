@@ -41,6 +41,9 @@ class DataDiscovery(TaskAction):
                         secmsmap[se] = ''
                     except httplib.HTTPException, ex:
                         self.logger.error("Couldn't map SE to site: %s" % se)
+                        print "Couldn't map SE to site: %s" % se
+                        print "got problem: %s" % ex
+                        print "got another problem: %s" % ex.__dict__
                 if se in secmsmap:
                     if type(secmsmap[se]) == list:
                         wmfile['locations'].extend(secmsmap[se])

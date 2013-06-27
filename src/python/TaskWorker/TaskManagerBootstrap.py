@@ -64,6 +64,7 @@ def bootstrap():
     ad = pure_ad
     ad['CRAB_AlgoArgs'] = json.loads(ad["CRAB_AlgoArgs"])
     ad['tm_split_args'] = ad["CRAB_AlgoArgs"]
+    ad['tarball_location'] = os.environ.get('CRAB_TARBALL_LOCATION', '')
 
     if command == "DBS":
         task = DBSDataDiscovery.DBSDataDiscovery(config)

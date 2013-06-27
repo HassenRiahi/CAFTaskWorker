@@ -134,41 +134,41 @@ tar xzf sqlalchemy.tar.gz || exit 2
 tar xzf crab3-condor-libs.tar.gz *.so* || exit 2
 
 pushd $WMCORE_PATH/src/python
-zip -rq $STARTDIR/CRAB3.zip WMCore PSetTweaks || exit 3
+zip -rq $STARTDIR/CRAB3.zip WMCore PSetTweaks -x \*.pyc || exit 3
 popd
 
 pushd $TASKWORKER_PATH/src/python
-zip -rq $STARTDIR/CRAB3.zip TaskWorker || exit 3
+zip -rq $STARTDIR/CRAB3.zip TaskWorker  -x \*.pyc || exit 3
 popd
 
 pushd $CAFUTILITIES_PATH/src/python
-zip -rq $STARTDIR/CRAB3.zip transform Databases PandaServerInterface.py || exit 3
+zip -rq $STARTDIR/CRAB3.zip transform Databases PandaServerInterface.py  -x \*.pyc || exit 3
 popd
 
 pushd DBS-$DBSVER/Clients/Python
-zip -rq $STARTDIR/CRAB3.zip DBSAPI || exit 3
+zip -rq $STARTDIR/CRAB3.zip DBSAPI  -x \*.pyc || exit 3
 popd
 
 pushd DLS-$DLSVER/Client/LFCClient
-zip -rq $STARTDIR/CRAB3.zip *.py || exit 3
+zip -rq $STARTDIR/CRAB3.zip *.py  -x \*.pyc || exit 3
 popd
 
 pushd $CRABCLIENT_PATH/src/python
-zip -rq $STARTDIR/CRAB3.zip CRABClient || exit 3
+zip -rq $STARTDIR/CRAB3.zip CRABClient  -x \*.pyc || exit 3
 cp ../../bin/crab $STARTDIR/
 cp ../../bin/crab3 $STARTDIR/
 popd
 
 pushd $CRABSERVER_PATH/src/python
-zip -rq $STARTDIR/CRAB3.zip CRABInterface || exit 3
+zip -rq $STARTDIR/CRAB3.zip CRABInterface  -x \*.pyc || exit 3
 popd
 
 pushd httplib2-0.8/python2
-zip -rq $STARTDIR/CRAB3.zip httplib2 || exit 3
+zip -rq $STARTDIR/CRAB3.zip httplib2  -x \*.pyc || exit 3
 popd
 
 pushd CherryPy-3.2.2/
-zip -rq $STARTDIR/CRAB3.zip cherrypy || exit 3
+zip -rq $STARTDIR/CRAB3.zip cherrypy  -x \*.pyc || exit 3
 popd
 
 pushd opt/cmssw/slc5_amd64_gcc462/external/py2-pyopenssl/0.11/lib/python2.6/site-packages
@@ -192,9 +192,11 @@ touch lib/fake_condor_config
 mkdir -p bin
 cp $CRABSERVER_PATH/bin/* bin/
 cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis.sh bin/
+cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis.py .
+cp $CAFUTILITIES_PATH/src/python/transformation/TweakPSet.py .
 
 echo "Making TaskManagerRun tarball"
-tar zcf $ORIGDIR/TaskManagerRun.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin || exit 4
+tar zcf $ORIGDIR/TaskManagerRun.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh CMSRunAnalysis.py bin TweakPSet.py || exit 4
 echo "Making CRAB3 client install"
 tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin lib || exit 4
 

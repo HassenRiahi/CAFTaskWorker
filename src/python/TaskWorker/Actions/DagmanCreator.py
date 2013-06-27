@@ -8,6 +8,7 @@ Generates the condor submit files and the master DAG.
 import os
 import json
 import shutil
+import string
 import logging
 import commands
 import tempfile
@@ -52,7 +53,8 @@ PARENT Job%(count)d CHILD ASO%(count)d
 
 CRAB_HEADERS = \
 """
-+CRAB_ReqName = %(requestname)s
++CRAB_ReqName = "%(requestname)s"
++CRAB_ReqNameExpr = %(requestname)s
 +CRAB_Workflow = %(workflow)s
 +CRAB_JobType = %(jobtype)s
 +CRAB_JobSW = %(jobsw)s
@@ -81,7 +83,8 @@ CRAB_AdditionalOutputFiles = %(addoutputfiles_flatten)s
 CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
-CRAB_ReqName = %(requestname)s
+CRAB_ReqName = "%(requestname)s"
+CRAB_ReqNameExpr = %(requestname)s
 CRAB_DBSURL = %(dbsurl_flatten)s
 CRAB_PublishDBSURL = %(publishdbsurl_flatten)s
 CRAB_Publish = %(publish)s
@@ -99,7 +102,11 @@ Executable = gWMS-CMSRunAnalysis.sh
 Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
-Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqName)"
+# args changed...
+#Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqNameExpr) "
+
+Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles)"
+
 transfer_input_files = CMSRunAnalysis.sh, cmscp.py%(additional_input_files)s
 transfer_output_files = jobReport.json.$(count)
 Environment = SCRAM_ARCH=$(CRAB_JobArch);%(additional_environment_options)s
@@ -214,7 +221,7 @@ def makeJobSubmit(task):
     info['publishdbsurl'] = info['tm_publish_dbs_url']
     info['publish'] = info['tm_publication']
     info['userdn'] = info['tm_user_dn']
-    info['requestname'] = task['tm_taskname']
+    info['requestname'] = string.replace(task['tm_taskname'],'"', '')
     info['savelogsflag'] = 0
     info['blacklistT1'] = 0
     info['siteblacklist'] = task['tm_site_blacklist']
@@ -226,9 +233,13 @@ def makeJobSubmit(task):
     info['runs'] = []
     info['lumis'] = []
     info = escape_strings_to_classads(info)
+    print info
+    print "There was the info ****"
+    logging.info("There was the info ***")
     with open("Job.submit", "w") as fd:
+        fd.write("# bring it for melo")
         fd.write(JOB_SUBMIT % info)
-
+        
     return info
 
 def make_specs(task, jobgroup, availablesites, outfiles, startjobid):
@@ -304,6 +315,10 @@ def create_subdag(splitter_result, **kwargs):
                     out_fd.write("+desiredSites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+DESIRED_Sites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+CRAB_localOutputFiles=\"%(localOutputFiles)s\"\n" % spec)
+                    if kwargs.get('tarball_location', None):
+                        out_fd.write("Environment = CRAB_TASKMANAGER_TARBALL=%s" % kwargs['tarball_location'])
+                        if kwargs['tarball_location'] == 'local':
+                            out_fd.write("transfer_input_files = TaskManagerRun.tar.gz")
                     out_fd.write(fd.read())
             dag += dag_fragment_workaround % spec
         else:

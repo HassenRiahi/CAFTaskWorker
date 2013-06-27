@@ -43,7 +43,8 @@ MASTER_DAG_SUBMIT_FILE = CRAB_HEADERS + CRAB_META_HEADERS + \
 +CRAB_Workflow = %(workflow)s
 +CRAB_UserDN = %(userdn)s
 universe = local
-+CRAB_ReqName = %(requestname)s
++CRAB_ReqName = "%(requestname)s"
++CRAB_ReqNameExpr = %(requestname)s
 scratch = %(scratch)s
 bindir = %(bindir)s
 output = $(scratch)/request.out
@@ -68,6 +69,7 @@ queue 1
 SUBMIT_INFO = [ \
             ('CRAB_Workflow', 'workflow'),
             ('CRAB_ReqName', 'requestname'),
+            ('CRAB_ReqNameExpr', 'requestname'),
             ('CRAB_JobType', 'jobtype'),
             ('CRAB_JobSW', 'jobsw'),
             ('CRAB_JobArch', 'jobarch'),
