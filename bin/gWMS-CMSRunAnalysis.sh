@@ -43,7 +43,7 @@ fi
 
 hostname
 echo "Starting CMSRunAnalysis.sh at $(date)"
-time sh ./CMSRunAnalysis.sh "$@" --oneEventMode $CRAB_oneEventMode
+time sh ./CMSRunAnalysis.sh "$@" --oneEventMode=$CRAB_oneEventMode
 EXIT_STATUS=$?
 echo "CMSRunAnalysis.sh Complete at $(date)"
 

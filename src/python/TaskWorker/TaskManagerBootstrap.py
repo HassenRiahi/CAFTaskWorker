@@ -50,7 +50,7 @@ def bootstrap():
     ad['tm_edm_outfiles'] = ad.eval("CRAB_EDMOutputFiles")
     ad['tm_site_whitelist'] = ad.eval("CRAB_SiteWhitelist")
     ad['tm_site_blacklist'] = ad.eval("CRAB_SiteBlacklist")
-
+    ad['tm_job_type'] = 'Analysis'
     pure_ad = {}
     for key in ad:
         try:

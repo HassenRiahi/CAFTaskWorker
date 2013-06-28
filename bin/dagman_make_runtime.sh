@@ -191,8 +191,8 @@ touch lib/fake_condor_config
 
 mkdir -p bin
 cp $CRABSERVER_PATH/bin/* bin/
-cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis.sh bin/
-cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis.py .
+cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis/CMSRunAnalysis.sh bin/
+cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis/CMSRunAnalysis.py .
 cp $CAFUTILITIES_PATH/src/python/transformation/TweakPSet.py .
 
 echo "Making TaskManagerRun tarball"
