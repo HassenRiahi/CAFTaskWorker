@@ -2,14 +2,14 @@
 import time
 import logging
 import os
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 from WMCore.Configuration import loadConfigurationFile, Configuration
 
 from TaskWorker.DataObjects.Task import Task
 from TaskWorker.Worker import Worker
 from TaskWorker.WorkerExceptions import *
-from TaskWorker.DBPoller import DBPoller
+from TaskWorker.DBPoller import DBPoller, states
 
 
 def validateConfig(config):
@@ -47,8 +47,8 @@ class MasterWorker(object):
             :arg bool quiet: it tells if a quiet logger is needed
             :arg bool debug: it tells if needs a verbose logger
             :return logger: a logger with the appropriate logger level."""
-            logHandler = RotatingFileHandler('twlog.log',
-                "a", 1000000000, 3)
+
+            logHandler = TimedRotatingFileHandler('twlog.log', when="midnight")
             logFormatter = \
                 logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
             logHandler.setFormatter(logFormatter)
@@ -65,7 +65,7 @@ class MasterWorker(object):
         self.logger = getLogging(quiet, debug)
         self.config = config
         self.dbconfig = dbconfig
-        self.db = DBPoller(dbconfig=dbconfig)
+        self.db = DBPoller(dbconfig=dbconfig, workername=self.config.TaskWorker.name)
         self.slaves = Worker(self.config, self.dbconfig)
         self.slaves.begin()
 
@@ -74,14 +74,16 @@ class MasterWorker(object):
            and distribuiting it to the slave processes."""
         self.logger.debug("Starting")
         while(True):
-            pendingWork = self.db.getNew(self.slaves.queueableTasks())
-            self.logger.info("Retrieved a total of %d works", len(pendingWork))
-            self.slaves.injectWorks(pendingWork)
+            for worktype in states():
+                pendingWork = self.db.getNew(worktype, self.slaves.queueableTasks())
+                self.logger.info("Retrieved a total of %d %s works" %(len(pendingWork), worktype))
+                self.slaves.injectWorks(pendingWork)
             self.logger.info('Worker status:')
             self.logger.info(' - free slaves: %d' % self.slaves.freeSlaves())
             self.logger.info(' - acquired tasks: %d' % self.slaves.queuedTasks())
             self.logger.info(' - tasks pending in queue: %d' % self.slaves.pendingTasks())
             self.db.updateFinished(self.slaves.checkFinished())
+
             time.sleep(self.config.TaskWorker.polling)
         self.logger.debug("Stopping")
 

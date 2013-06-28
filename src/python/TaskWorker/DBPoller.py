@@ -6,24 +6,33 @@ from WMCore.WMInit import WMInit
 from Databases.TaskDB.Interface.Task.GetTasks import getReadyTasks
 from Databases.TaskDB.Interface.Task.SetTasks import setReadyTasks, setFailedTasks
 
+from Databases.TaskDB.Interface.Task.SetTasks import updateTaskWorker
+
 from TaskWorker.DataObjects.Task import Task
 from TaskWorker.Actions.Handler import handleResubmit, handleNewTask, handleKill
 
 
 ## NOW placing this here, then to be verified if going into Action.Handler, or TSM
-STATE_ACTIONS_MAP = {"NEW": handleNewTask,
-                     "RESUBMIT": handleResubmit,
-                     "KILL": handleKill,}
+## This is a list because we want to preserve the order
+STATE_ACTIONS_MAP = [("NEW", handleNewTask), ("KILL", handleKill), ("RESUBMIT", handleResubmit)]
+def states():
+    for st in STATE_ACTIONS_MAP:
+        yield st[0]
 
+def handler(status):
+    for st in STATE_ACTIONS_MAP:
+        if st[0] == status:
+            return st[1]
 
 class DBPoller(object):
     """Class taking care of getting work from the Database"""
 
-    def __init__(self, dbconfig):
+    def __init__(self, dbconfig, workername):
         """Initializer setting: logging, config and db connection
 
         :arg WMCore.Configuration dbconfig: input for database configuration/secret."""
         self.logger = logging.getLogger(type(self).__name__)
+        self.workername = workername
         self.dbconfig = dbconfig
         wmInit = WMInit()
         (dialect, junk) = self.dbconfig.CoreDatabase.connectUrl.split(":", 1)
@@ -43,13 +52,18 @@ class DBPoller(object):
                                       'splitalgo': 'LumiBased', 'sitewhitelist': ['T2_CH_CERN', 'T1_US_FNAL'], 'siteblacklist': [],
                                       'userdn': '/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=mcinquil/CN=660800/CN=Mattia Cinquilli', 'vo': 'cms', 'group': '', 'role': ''}), None)]
 
-    def getNew(self, worklimit, emulate=False):
+
+    def getNew(self, worktype, worklimit, emulate=False):
         """This method aims to contain the logic to retrieve the work
            from the source database.
 
+           :arg str worktype: the type of work to be retrieve which can be one of the 
+                              key in `STATE_ACTIONS_MAP`
            :arg int worklimit: the maximum amount of works to retrieve
            :art bool emulate: if the database polling has to be emulated
            :return: the list of input work to process."""
+        if worktype is None or worktype not in states():
+           raise ValueError("ERROR: worktype has to be one of %s while you've selected %s" %(str(states()), str(worktype))) 
         if worklimit == 0:
             return []
         elif worklimit <= 0:
@@ -61,7 +75,8 @@ class DBPoller(object):
             return self.getNewEmulated(worklimit)
 
         tasktodo = []
-        pendingtasks = getReadyTasks(limit=worklimit)
+        updateTaskWorker(worktype, 'HOLDING', self.workername, worklimit)
+        pendingtasks = getReadyTasks(getstatus='HOLDING', twname=self.workername, limit=worklimit)
         for task in pendingtasks:
             newtask = Task()
             try:
@@ -74,8 +89,8 @@ class DBPoller(object):
                 setFailedTasks(task[0], "Failed", msg)
                 continue
             else:
-                setReadyTasks(task[0], 'queued')
-            tasktodo.append((STATE_ACTIONS_MAP[newtask['tm_task_status']], newtask, None))
+                setReadyTasks(task[0], 'QUEUED')
+            tasktodo.append((handler(worktype), newtask, None))
 
         return tasktodo
 

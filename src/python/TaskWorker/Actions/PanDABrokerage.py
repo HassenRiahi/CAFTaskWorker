@@ -11,7 +11,7 @@ class PanDABrokerage(PanDAAction):
     def execute(self, *args, **kwargs):
         results = []
         for jgroup in args[0]:
-            self.logger.debug(jgroup)  
+            self.logger.debug(jgroup)
             possiblesites = jgroup.jobs[0]['input_files'][0]['locations']
             self.logger.debug("possiblesites == " + str(possiblesites))
             if len(possiblesites) == 0:
@@ -19,11 +19,12 @@ class PanDABrokerage(PanDAAction):
                 self.logger.error(msg)
                 results.append(Result(task=kwargs['task'], result=(jgroup, None, []), err=msg))
                 continue
-            self.logger.debug("white list == " + str(set(kwargs['task']['tm_site_whitelist'])))
-            self.logger.debug("black list == " + str(set(kwargs['task']['tm_site_blacklist'])))
-            availablesites = list( (set(possiblesites) & set(kwargs['task']['tm_site_whitelist'])) if kwargs['task']['tm_site_whitelist'] else set(possiblesites) &
-                                   set(possiblesites) -
-                                   set(kwargs['task']['tm_site_blacklist']))
+            #use resubmiti white/black lists if we have them
+            siteWhitelist = kwargs['task']['tm_site_whitelist'] if not kwargs['task']['resubmit_site_whitelist'] else kwargs['task']['resubmit_site_whitelist']
+            siteBlacklist = kwargs['task']['tm_site_blacklist'] if not kwargs['task']['resubmit_site_blacklist'] else kwargs['task']['resubmit_site_blacklist']
+            self.logger.debug("white list == %s" % set(siteWhitelist))
+            self.logger.debug("black list == %s" % set(siteBlacklist))
+            availablesites = list( set(possiblesites) & set(siteWhitelist) if siteWhitelist else set(possiblesites) - set(siteBlacklist) )
             self.logger.info( 'available sites == %s' % str(availablesites))
             fixedsites = set(self.config.Sites.available)
             availablesites = list( set(availablesites) & fixedsites )

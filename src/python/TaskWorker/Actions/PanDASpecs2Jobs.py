@@ -16,10 +16,10 @@ class PassThroughOptionParser(OptionParser):
     An unknown option pass-through implementation of OptionParser.
 
     When unknown arguments are encountered, bundle with largs and try again,
-    until rargs is depleted.  
+    until rargs is depleted.
 
     sys.exit(status) will still be called if a known argument is passed
-    incorrectly (e.g. missing arguments or bad argument types, etc.)        
+    incorrectly (e.g. missing arguments or bad argument types, etc.)
     """
     def _process_args(self, largs, rargs, values):
         while rargs:
@@ -37,6 +37,8 @@ class PanDASpecs2Jobs(PanDAAction):
         self.logger.info("Transforming old specs into jobs.")
 
         regroupjobs = {}
+        self.logger.error(str(kwargs['task']))
+        self.logger.error(str(args))
         ## grouping in a dictionary can happen here
         for job in args[0]:
             if job.jobDefinitionID in regroupjobs:
@@ -56,14 +58,13 @@ class PanDASpecs2Jobs(PanDAAction):
                 parser.add_option('--jobNumber', dest='jobnum', type='int')
                 (options, args) = parser.parse_args(shlex.split(job.jobParameters))
                 jj = WMJob()
-                def hack(site):
-                    return site.split('_', 1)[-1]
                 jj['input_files'] = []
                 for infile in literal_eval(options.inputfiles):
                     jj['input_files'].append({'lfn': infile,
                                               'block': 'unknown',
-                                              'locations': [hack(ss) for ss in literal_eval(options.allsites)]})
-                jj['mask']['runAndLumis'] = literal_eval(options.runlumis)
+                                              'locations': [ss for ss in literal_eval(options.allsites)]})
+                if options.runlumis:
+                    jj['mask']['runAndLumis'] = literal_eval(options.runlumis)
                 jj['panda_oldjobid'] = job.PandaID
                 jj['jobnum'] = options.jobnum
                 jg.add(jj)
