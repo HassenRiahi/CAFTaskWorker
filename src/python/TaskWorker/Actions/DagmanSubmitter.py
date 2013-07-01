@@ -43,8 +43,7 @@ MASTER_DAG_SUBMIT_FILE = CRAB_HEADERS + CRAB_META_HEADERS + \
 +CRAB_Workflow = %(workflow)s
 +CRAB_UserDN = %(userdn)s
 universe = local
-+CRAB_ReqName = "%(requestname)s"
-+CRAB_ReqNameExpr = %(requestname)s
++CRAB_ReqName = %(requestname)s
 scratch = %(scratch)s
 bindir = %(bindir)s
 output = $(scratch)/request.out
@@ -69,7 +68,6 @@ queue 1
 SUBMIT_INFO = [ \
             ('CRAB_Workflow', 'workflow'),
             ('CRAB_ReqName', 'requestname'),
-            ('CRAB_ReqNameExpr', 'requestname'),
             ('CRAB_JobType', 'jobtype'),
             ('CRAB_JobSW', 'jobsw'),
             ('CRAB_JobArch', 'jobarch'),
@@ -210,14 +208,14 @@ class DagmanSubmitter(TaskAction.TaskAction):
         addCRABInfoToClassAd(dagAd, info)
 
         # NOTE: Changes here must be synchronized with the job_submit in DagmanCreator.py in CAFTaskWorker
+        dagAd["Out"] = str(os.path.join(info['scratch'], "request.out"))
+        dagAd["Err"] = str(os.path.join(info['scratch'], "request.err"))
         dagAd["CRAB_Attempt"] = 0
         dagAd["JobUniverse"] = 12
         dagAd["HoldKillSig"] = "SIGUSR1"
-        dagAd["Out"] = os.path.join(info['scratch'], "request.out")
-        dagAd["Err"] = os.path.join(info['scratch'], "request.err")
         dagAd["Cmd"] = cmd
         dagAd['Args'] = arg
-        dagAd["TransferInput"] = info['inputFilesString']
+        dagAd["TransferInput"] = str(info['inputFilesString'])
         dagAd["LeaveJobInQueue"] = classad.ExprTree("(JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))")
         dagAd["TransferOutput"] = info['outputFilesString']
         dagAd["OnExitRemove"] = classad.ExprTree("( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))")
@@ -240,6 +238,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
                     resultAds = []
                     htcondor.SecMan().invalidateAllSessions()
                     os.environ['X509_USER_PROXY'] = info['userproxy']
+                    htcondor.param['DELEGATE_FULL_JOB_GSI_CREDENTIALS'] = 'true'
                     schedd.submit(dagAd, 1, True, resultAds)
                     schedd.spool(resultAds)
                     wpipe.write("OK")
