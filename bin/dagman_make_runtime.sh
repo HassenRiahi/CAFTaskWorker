@@ -7,6 +7,8 @@ BASEDIR=$(cd "$(dirname "$0")"; pwd)
 ORIGDIR=$PWD
 STARTDIR=$PWD/tmp/runtime
 
+CRAB3_VERSION=3.0.0-pre7
+
 WMCOREDIR=$STARTDIR/WMCore
 WMCOREVER=0.9.70-dagman2
 WMCOREREPO=bbockelm
@@ -150,10 +152,12 @@ zip -r $STARTDIR/CRAB3.zip cherrypy || exit 3
 popd
 
 pushd opt/cmssw/slc5_amd64_gcc462/external/py2-pyopenssl/0.11/lib/python2.6/site-packages
+rm -rf $STARTDIR/lib/python/OpenSSL
 mv OpenSSL $STARTDIR/lib/python/
 popd
 
 cat > setup.sh << EOF
+export CRAB3_VERSION=$CRAB3_VERSION
 export CRAB3_BASEPATH=\`dirname \${BASH_SOURCE[0]}\`
 export CRAB3_BASEPATH=\`readlink -e \$CRAB3_BASEPATH\`
 export PATH=\$CRAB3_BASEPATH:\$PATH
@@ -171,7 +175,7 @@ mkdir -p bin
 cp $CRABSERVER_PATH/bin/* bin/
 cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnaly.sh bin/
 
-tar zcf $ORIGDIR/TaskManagerRun.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnaly.sh bin || exit 4
+tar zcf $ORIGDIR/TaskManagerRun-$CRAB3_VERSION.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnaly.sh bin || exit 4
 tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnaly.sh bin lib || exit 4
 
 popd
