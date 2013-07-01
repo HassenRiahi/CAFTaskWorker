@@ -58,15 +58,22 @@ class PanDAInjection(PanDAAction):
         :arg list str allsites: all possible sites where the job can potentially run
         :return: the list of job sepcs objects."""
         refreshSpecs(proxy=task['user_proxy'])
+        oldids = []
         pandajobspec = []
         i = startjobid
         for job in jobgroup.jobs:
             #if i > 10:
             #    break
             jobname = "%s-%d" %(basejobname, i)
-            pandajobspec.append(self.createJobSpec(task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, allsites, job.get('jobnum', i)))
+            jspec = self.createJobSpec(task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, allsites, job.get('jobnum', i))
+            pandajobspec.append(jspec)
+            if hasattr(jspec, 'parentID'):
+                try:
+                    oldids.append(int(jspec.parentID))
+                except ValueError:
+                    pass
             i += 1
-        return pandajobspec, i
+        return pandajobspec, i, oldids
 
     def createJobSpec(self, task, outdataset, job, jobset, jobdef, site, jobname, lfnhanger, allsites, jobid):
         """Create a spec for one job
@@ -150,11 +157,14 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters += '--cmsswVersion=%s ' % task['tm_job_sw']
         pandajob.jobParameters += '--scramArch=%s ' % task['tm_job_arch']
         pandajob.jobParameters += '--inputFile=\'%s\' ' % json.dumps(infiles)
-        pandajob.jobParameters += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
+
+        self.jobParametersSetting(pandajob, job, self.jobtypeMapper[task['tm_job_type']])
+
         pandajob.jobParameters += '-o "%s" ' % str(outjobpar)
         pandajob.jobParameters += '--dbs_url=%s ' % task['tm_dbs_url']
         pandajob.jobParameters += '--publish_dbs_url=%s ' % task['tm_publish_dbs_url']
         pandajob.jobParameters += '--publishFiles=%s ' % ('True' if task['tm_publication'] == 'T' else 'False')
+        pandajob.jobParameters += '--saveLogs=%s ' % ('True' if task['tm_save_logs'] == 'T' else 'False')
         pandajob.jobParameters += '--availableSites=\'%s\' ' %json.dumps(allsites)
         pandajob.jobParameters += '%s ' % task['tm_taskname'] #Needed by ASO
 
@@ -166,6 +176,25 @@ class PanDAInjection(PanDAAction):
             pandajob.addFile(filetoadd)
 
         return pandajob
+
+
+    def jobParametersSetting(self, pandajob, job, jobtype):
+        """ setup jobtype specific fraction of the jobParameters """
+
+        if jobtype == 'Processing':
+            pandajob.jobParameters += '--runAndLumis=\'%s\' ' % json.dumps(job['mask']['runAndLumis'])
+        elif jobtype == 'Production':
+            # The following two are hardcoded currently.
+            # we expect they will be used/useful in the near future
+            pandajob.jobParameters += '--seeding=\'%s\' ' % 'AutomaticSeeding'
+            pandajob.jobParameters += '--lheInputFiles=\'%s\' ' % 'None'
+            #
+            pandajob.jobParameters += '--firstEvent=\'%s\' ' % job['mask']['FirstEvent']
+            pandajob.jobParameters += '--lastEvent=\'%s\' ' % job['mask']['LastEvent']
+            pandajob.jobParameters += '--firstLumi=\'%s\' ' % job['mask']['FirstLumi']
+            pandajob.jobParameters += '--firstRun=\'%s\' ' % job['mask']['FirstRun']
+        elif jobtype == 'Generic':
+            self.logger.info('Generic JobType not yet supported')
 
     def execute(self, *args, **kwargs):
         self.logger.info(" create specs and inject into PanDA ")
@@ -179,10 +208,16 @@ class PanDAInjection(PanDAAction):
         basejobname = "%s" % commands.getoutput('uuidgen')
         lfnhanger = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(LFNHANGERLEN))
         ## /<primarydataset>/<yourHyperNewsusername>-<publish_data_name>-<PSETHASH>/USER
-        outdataset = '/%s/%s-%s/USER' %(kwargs['task']['tm_input_dataset'].split('/')[1],
+        if kwargs['task']['tm_input_dataset']:
+            primaryDS = kwargs['task']['tm_input_dataset'].split('/')[1]
+        else:
+            primaryDS = '-'.join(kwargs['task']['tm_publish_name'].split('-')[:-1])
+
+        outdataset = '/%s/%s-%s/USER' %(primaryDS,
                                         kwargs['task']['tm_username'],
                                         kwargs['task']['tm_publish_name'])
-
+        alloldids = kwargs['task']['panda_resubmitted_jobs']
+        resulting = False
         for jobgroup in args[0]:
             jobs, site, allsites = jobgroup.result
             blocks = [infile['block'] for infile in jobs.jobs[0]['input_files'] if infile['block']]
@@ -193,12 +228,12 @@ class PanDAInjection(PanDAAction):
                     msg = "No site available for submission of task %s" %(kwargs['task'])
                     raise NoAvailableSite(msg)
 
-                jobgroupspecs, startjobid = self.makeSpecs(kwargs['task'], outdataset, jobs, site, jobset, jobdef,
-                                                           startjobid, basejobname, lfnhanger, allsites)
+                jobgroupspecs, startjobid, oldids = self.makeSpecs(kwargs['task'], outdataset, jobs, site, jobset, jobdef,
+                                                                   startjobid, basejobname, lfnhanger, allsites)
                 jobsetdef = self.inject(kwargs['task'], jobgroupspecs)
                 outjobset = jobsetdef.keys()[0]
                 outjobdefs = jobsetdef[outjobset]
-
+                alloldids.extend(oldids)
                 if outjobset is None:
                     msg = "Cannot retrieve the job set id for task %s " %kwargs['task']
                     raise PanDAException(msg)
@@ -212,7 +247,6 @@ class PanDAInjection(PanDAAction):
 
                 for jd in outjobdefs:
                     addJobGroup(kwargs['task']['tm_taskname'], jd, "Submitted", ",".join(blocks), None, kwargs['task']['tm_user_dn'])
-                setInjectedTasks(kwargs['task']['tm_taskname'], "Submitted", outjobset)
                 results.append(Result(task=kwargs['task'], result=jobsetdef))
             except Exception, exc:
                 msg = "Problem %s injecting job group from task %s reading data from blocks %s" % (str(exc), kwargs['task'], ",".join(blocks))
@@ -220,9 +254,13 @@ class PanDAInjection(PanDAAction):
                 self.logger.error(str(traceback.format_exc()))
                 addJobGroup(kwargs['task']['tm_taskname'], None, "Failed", ",".join(blocks), str(exc), kwargs['task']['tm_user_dn'])
                 results.append(Result(task=kwargs['task'], warn=msg))
-        if not jobset:
+            else:
+                resulting = True
+        if not jobset: # or resulting is False :
             msg = "No task id available for the task. Setting %s at failed." % kwargs['task']
             self.logger.error(msg)
             setFailedTasks(kwargs['task']['tm_taskname'], "Failed", msg)
             results.append(Result(task=kwargs['task'], err=msg))
+        else: #if resulting
+            setInjectedTasks(kwargs['task']['tm_taskname'], "Submitted", jobset, str(list(set(alloldids))))
         return results

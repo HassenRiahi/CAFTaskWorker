@@ -8,6 +8,7 @@ Generates the condor submit files and the master DAG.
 import os
 import json
 import shutil
+import string
 import logging
 import commands
 import tempfile
@@ -52,7 +53,8 @@ PARENT Job%(count)d CHILD ASO%(count)d
 
 CRAB_HEADERS = \
 """
-+CRAB_ReqName = %(requestname)s
++CRAB_ReqName = "%(requestname)s"
++CRAB_ReqNameExpr = %(requestname)s
 +CRAB_Workflow = %(workflow)s
 +CRAB_JobType = %(jobtype)s
 +CRAB_JobSW = %(jobsw)s
@@ -82,6 +84,7 @@ CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
 CRAB_ReqName = %(requestname_flatten)s
+CRAB_ReqNameExpr = %(requestname)s
 CRAB_DBSURL = %(dbsurl_flatten)s
 CRAB_PublishDBSURL = %(publishdbsurl_flatten)s
 CRAB_Publish = %(publication)s
@@ -95,14 +98,18 @@ CRAB_Id = $(count)
 job_ad_information_attrs = MATCH_EXP_JOBGLIDEIN_CMSSite, JOBGLIDEIN_CMSSite
 
 universe = vanilla
-Executable = gWMS-CMSRunAnaly.sh
+Executable = gWMS-CMSRunAnalysis.sh
 Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
-Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqName)"
-transfer_input_files = CMSRunAnaly.sh, cmscp.py
+# args changed...
+#Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqNameExpr) "
+
+Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles)"
+
+transfer_input_files = CMSRunAnalysis.sh, cmscp.py%(additional_input_files)s
 transfer_output_files = jobReport.json.$(count)
-Environment = SCRAM_ARCH=$(CRAB_JobArch)
+Environment = SCRAM_ARCH=$(CRAB_JobArch);%(additional_environment_options)s
 should_transfer_files = YES
 #x509userproxy = %(x509up_file)s
 use_x509userproxy = true
@@ -123,10 +130,10 @@ universe = local
 Executable = dag_bootstrap.sh
 Arguments = "ASO $(CRAB_AsyncDest) %(temp_dest)s %(output_dest)s $(count) $(Cluster).$(Process) cmsRun_$(count).log.tar.gz $(outputFiles)"
 Output = aso.$(count).out
-transfer_input_files = job_log.$(count), jobReport.json.$(count)
+transfer_input_files = job_log.$(count), jobReport.json.$(count)%(additional_input_files)s
 +TransferOutput = ""
 Error = aso.$(count).err
-Environment = PATH=/usr/bin:/bin
+Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
 use_x509userproxy true
 #x509userproxy = %(x509up_file)s
 leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
@@ -151,7 +158,7 @@ def escape_strings_to_classads(input):
     for var in 'workflow', 'jobtype', 'jobsw', 'jobarch', 'inputdata', 'splitalgo', 'algoargs', \
            'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publishdbsurl', \
            'userdn', 'requestname', 'publication':
-        val = input[var]
+        val = input.get(var, None)
         if val == None:
             info[var] = 'undefined'
         else:
@@ -214,7 +221,7 @@ def makeJobSubmit(task):
     info['publishdbsurl'] = info['tm_publish_dbs_url']
     info['publication'] = info['tm_publication']
     info['userdn'] = info['tm_user_dn']
-    info['requestname'] = task['tm_taskname']
+    info['requestname'] = string.replace(task['tm_taskname'],'"', '')
     info['savelogsflag'] = 0
     info['blacklistT1'] = 0
     info['siteblacklist'] = task['tm_site_blacklist']
@@ -226,9 +233,13 @@ def makeJobSubmit(task):
     info['runs'] = []
     info['lumis'] = []
     info = escape_strings_to_classads(info)
+    print info
+    print "There was the info ****"
+    logging.info("There was the info ***")
     with open("Job.submit", "w") as fd:
+        fd.write("# bring it for melo")
         fd.write(JOB_SUBMIT % info)
-
+        
     return info
 
 def make_specs(task, jobgroup, availablesites, outfiles, startjobid):
@@ -270,7 +281,7 @@ def create_subdag(splitter_result, **kwargs):
 
     outfiles = kwargs['task']['tm_outfiles'] + kwargs['task']['tm_tfile_outfiles'] + kwargs['task']['tm_edm_outfiles']
 
-    os.chmod("CMSRunAnaly.sh", 0755)
+    os.chmod("CMSRunAnalysis.sh", 0755)
 
     #fixedsites = set(self.config.Sites.available)
     for jobgroup in splitter_result:
@@ -304,6 +315,10 @@ def create_subdag(splitter_result, **kwargs):
                     out_fd.write("+desiredSites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+DESIRED_Sites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+CRAB_localOutputFiles=\"%(localOutputFiles)s\"\n" % spec)
+                    if kwargs.get('tarball_location', None):
+                        out_fd.write("Environment = CRAB_TASKMANAGER_TARBALL=%s" % kwargs['tarball_location'])
+                        if kwargs['tarball_location'] == 'local':
+                            out_fd.write("transfer_input_files = TaskManagerRun.tar.gz")
                     out_fd.write(fd.read())
             dag += DAG_FRAGMENT_WORKAROUND % spec
         else:
@@ -354,7 +369,7 @@ class DagmanCreator(TaskAction.TaskAction):
 
             transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
-            gwms_location = getLocation('gWMS-CMSRunAnaly.sh', 'CAFTaskWorker/bin/')
+            gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
             bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
 
             cwd = os.getcwd()
