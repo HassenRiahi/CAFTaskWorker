@@ -14,11 +14,11 @@ WMCOREVER=0.9.70-dagman2
 WMCOREREPO=bbockelm
 
 TASKWORKERDIR=$STARTDIR/TaskWorker
-TASKWORKERVER=0.0.1pre3-dagman5
+TASKWORKERVER=0.1.2-dagman6
 TASKWORKERREPO=bbockelm
 
 CAFUTILITIESDIR=$STARTDIR/CAFUtilities
-CAFUTILITIESVER=0.0.1pre4-dagman
+CAFUTILITIESVER=0.1-dagman5
 CAFUTILITIESREPO=bbockelm
 
 DBSDIR=$STARTDIR/DBS
@@ -30,11 +30,11 @@ DLSVER=DLS_1_1_3
 DLSREPO=bbockelm
 
 CRABSERVERDIR=$STARTDIR/CRABServer
-CRABSERVERVER=3.2.0pre2-dagman3
+CRABSERVERVER=3.2.0pre7-dagman
 CRABSERVERREPO=bbockelm
 
 CRABCLIENTDIR=$STARTDIR/CRABClient
-CRABCLIENTVER=3.2.0pre2-dagman3
+CRABCLIENTVER=3.2.0pre7-dagman
 CRABCLIENTREPO=bbockelm
 [[ -d $STARTDIR ]] || mkdir -p $STARTDIR
 
@@ -200,7 +200,7 @@ cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis/CMSRunAnalysis.py
 cp $CAFUTILITIES_PATH/src/python/transformation/TweakPSet.py .
 
 echo "Making TaskManagerRun tarball"
-tar zcf $ORIGDIR/TaskManagerRun-$CRAB3_VERSION.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnaly.sh CMSRunAnalysis.py bin TweakPSet.py || exit 4
+tar zcf $ORIGDIR/TaskManagerRun-$CRAB3_VERSION.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh CMSRunAnalysis.py bin TweakPSet.py || exit 4
 echo "Making CRAB3 client install"
 tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin lib || exit 4
 
