@@ -2,7 +2,7 @@
 import time
 import logging
 import os
-from logging.handlers import TimedRotatingFileHandler
+from MultiProcessingLog import MultiProcessingLog
 
 from WMCore.Configuration import loadConfigurationFile, Configuration
 
@@ -48,7 +48,7 @@ class MasterWorker(object):
             :arg bool debug: it tells if needs a verbose logger
             :return logger: a logger with the appropriate logger level."""
 
-            logHandler = TimedRotatingFileHandler('twlog.log', when="midnight")
+            logHandler = MultiProcessingLog('twlog.log', when="midnight")
             logFormatter = \
                 logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
             logHandler.setFormatter(logFormatter)

@@ -23,6 +23,7 @@ def processWorker(inputs, results):
        :arg Queue results: the queue where this method writes the output
        :return: default returning zero, but not really needed."""
     logger = logging.getLogger(processWorker.__name__)
+    procName = multiprocessing.current_process().name
     logger.debug("Starting DB connections...") 
     wmInit = WMInit()
     (dialect, junk) = WORKER_DBCONFIG.CoreDatabase.connectUrl.split(":", 1)
@@ -41,7 +42,7 @@ def processWorker(inputs, results):
 
         outputs = None
         t0 = time.time()
-        logger.debug("Starting %s on %s" %(str(work), task['tm_taskname']))
+        logger.debug("%s: Starting %s on %s" %(procName, str(work), task['tm_taskname']))
         try:
             outputs = work(WORKER_CONFIG, task, inputargs)
         except WorkerHandlerException, we:
@@ -49,13 +50,13 @@ def processWorker(inputs, results):
             outputs = Result(task=task, err=str(we))
         except Exception, exc:
             outputs = Result(task=task, err=str(exc))
-            msg = "I just had a failure for " + str(exc)
+            msg = "%s: I just had a failure for " % (procName, str(exc))
             msg += "\n\tworkid=" + str(workid)
             msg += "\n\ttask=" + str(task)
             msg += "\n" + str(traceback.format_exc())
             logger.error(msg)
         t1 = time.time()
-        logger.debug("...work on %s completed in %d seconds: %s" % (task['tm_taskname'], t1-t0, outputs))
+        logger.debug("%s: ...work on %s completed in %d seconds: %s" % (procName, task['tm_taskname'], t1-t0, outputs))
 
         results.put({
                      'workid': workid,
