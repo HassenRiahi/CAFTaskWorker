@@ -8,6 +8,7 @@ import urllib
 from httplib import HTTPException
 import traceback
 from base64 import b64encode
+from MultiProcessingLog import MultiProcessingLog
 
 #WMcore dependencies
 from WMCore.Configuration import loadConfigurationFile, Configuration
@@ -72,7 +73,7 @@ class MasterWorker(object):
             :arg bool debug: it tells if needs a verbose logger
             :return logger: a logger with the appropriate logger level."""
 
-            logHandler = TimedRotatingFileHandler('twlog.log', when="midnight")
+            logHandler = MultiProcessingLog('twlog.log', when="midnight")
             logFormatter = \
                 logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
             logHandler.setFormatter(logFormatter)
