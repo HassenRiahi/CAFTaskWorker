@@ -19,8 +19,7 @@ class DataDiscovery(TaskAction):
     def formatOutput(self, task, requestname, datasetfiles, locations):
         """Receives as input the result of the data location
            discovery operations and fill up the WMCore objects."""
-        self.logger.info(" Formatting data discovery output ") ## to become debug
-
+        self.logger.debug(" Formatting data discovery output ")
         # TEMPORARY
         secmsmap = {}
         sbj = SiteDBJSON()

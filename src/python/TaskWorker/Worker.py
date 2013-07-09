@@ -12,10 +12,9 @@ from TaskWorker.WorkerExceptions import WorkerHandlerException
 
 ## Creating configuration globals to avoid passing these around at every request
 global WORKER_CONFIG
-global WORKER_DBCONFIG
 
 
-def processWorker(inputs, results):
+def processWorker(inputs, results, instance):
     """Wait for an reference to appear in the input queue, call the referenced object
        and write the output in the output queue.
 
@@ -23,11 +22,6 @@ def processWorker(inputs, results):
        :arg Queue results: the queue where this method writes the output
        :return: default returning zero, but not really needed."""
     logger = logging.getLogger(processWorker.__name__)
-    logger.debug("Starting DB connections...") 
-    wmInit = WMInit()
-    (dialect, junk) = WORKER_DBCONFIG.CoreDatabase.connectUrl.split(":", 1)
-    wmInit.setDatabaseConnection(dbConfig=WORKER_DBCONFIG.CoreDatabase.connectUrl, dialect=dialect)
-    logger.debug("...DB connections ready.")
     while True:
         try:
             workid, work, task, inputargs = inputs.get()
@@ -43,15 +37,14 @@ def processWorker(inputs, results):
         t0 = time.time()
         logger.debug("Starting %s on %s" %(str(work), task['tm_taskname']))
         try:
-            outputs = work(WORKER_CONFIG, task, inputargs)
+            outputs = work(instance, WORKER_CONFIG, task, inputargs)
         except WorkerHandlerException, we:
-            #logger.error(we)
             outputs = Result(task=task, err=str(we))
         except Exception, exc:
             outputs = Result(task=task, err=str(exc))
             msg = "I just had a failure for " + str(exc)
             msg += "\n\tworkid=" + str(workid)
-            msg += "\n\ttask=" + str(task)
+            msg += "\n\ttask=" + str(task['tm_taskname'])
             msg += "\n" + str(traceback.format_exc())
             logger.error(msg)
         t1 = time.time()
@@ -68,16 +61,14 @@ class Worker(object):
     """Worker class providing all the functionalities to manage all the slaves
        and distribute the work"""
 
-    def __init__(self, config, dbconfig):
+    def __init__(self, config, instance):
         """Initializer
 
-        :arg WMCore.Configuration config: input TaskWorker configuration
-        :arg WMCore.Configuration dbconfig: input for database configuration/secret."""
+        :arg WMCore.Configuration config: input TaskWorker configuration."""
         self.logger = logging.getLogger(type(self).__name__)
         global WORKER_CONFIG
         WORKER_CONFIG = config
-        global WORKER_DBCONFIG
-        WORKER_DBCONFIG = dbconfig
+        #global WORKER_DBCONFIG
         self.pool = []
         self.nworkers = WORKER_CONFIG.TaskWorker.nslaves if getattr(WORKER_CONFIG.TaskWorker, 'nslaves', None) is not None else multiprocessing.cpu_count()
         ## limit the size of the queue to be al maximum twice then the number of worker
@@ -85,6 +76,7 @@ class Worker(object):
         self.inputs  = multiprocessing.Queue(self.leninqueue)
         self.results = multiprocessing.Queue()
         self.working = {}
+        self.instance = instance
 
     def __del__(self):
         """When deleted shutting down all slaves"""
@@ -95,11 +87,11 @@ class Worker(object):
         if len(self.pool) == 0:
             # Starting things up
             for x in range(self.nworkers):
-                self.logger.info("Starting process %i" %x)
-                p = multiprocessing.Process(target = processWorker, args = (self.inputs, self.results))
+                self.logger.debug("Starting process %i" %x)
+                p = multiprocessing.Process(target = processWorker, args = (self.inputs, self.results, self.instance))
                 p.start()
                 self.pool.append(p)
-        self.logger.debug("Started %d slaves"% len(self.pool))
+        self.logger.info("Started %d slaves"% len(self.pool))
 
     def end(self):
         """Stopping all the slaves"""
@@ -117,7 +109,7 @@ class Worker(object):
             proc.terminate()
 
         self.pool = []
-        self.logger.debug('Slave stopped!')
+        self.logger.info('Slaves stopped!')
         return
 
     def injectWorks(self, items):
@@ -198,11 +190,10 @@ class Worker(object):
 if __name__ == '__main__':
 
     from TaskWorker.Actions.Handler import handleNewTask
-    from TaskWorker.DataObjects.Task import Task
 
     a = Worker()
     a.begin()
-    a.injectWorks([(Task(), handleNewTask, 'pippo'),(Task(), handleNewTask, 'pippo')])
+    a.injectWorks([(Task(), handleNewTask, 'pippo'),({'tm_taskname': 'pippo'}, handleNewTask, 'pippo')])
     while(True):
         out = a.checkFinished()
         time.sleep(1)

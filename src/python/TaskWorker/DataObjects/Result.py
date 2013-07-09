@@ -38,7 +38,7 @@ class Result(object):
 
     def __str__(self):
         """Use me just to print out in case it is needed to debug"""
-        msg = 'Task = %s\n' %self.task
+        msg = 'Task = %s\n' %self.task['tm_taskname']
         if self.result:
             msg += "Result = %s\n" %str(self.result)
         if self.error:

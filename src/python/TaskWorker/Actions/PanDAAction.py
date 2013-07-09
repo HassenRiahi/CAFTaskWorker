@@ -7,11 +7,10 @@ class PanDAAction(TaskAction):
        better to leave this here in order to eventually be ready to
        support specific PanDA interaction needs."""
 
-    def __init__(self, pandaconfig):
-        #super(TaskAction, self).__init__(config=pandaconfig)
-        TaskAction.__init__(self, pandaconfig)
-        ## TODO check some specific config? otherwise this can probably be removed  and default init could be used
-        #print "specific panda action init", self
+    def __init__(self, pandaconfig, instance):
+        TaskAction.__init__(self, pandaconfig, instance)
+#        ## TODO check some specific config? otherwise this can probably be removed  and default init could be used
+#        #print "specific panda action init", self
 
     def translateSiteName(self, sites):
         return ['ANALY_'+ s for s in sites]

@@ -1,6 +1,8 @@
-from WMCore.Credential.Proxy import Proxy
+import urllib
+from httplib import HTTPException
+from base64 import b64encode
 
-from Databases.TaskDB.Interface.Task.SetTasks import setFailedTasks
+from WMCore.Credential.Proxy import Proxy
 
 from TaskWorker.Actions.TaskAction import TaskAction
 from TaskWorker.DataObjects.Result import Result
@@ -13,8 +15,8 @@ MINPROXYLENGTH = 60 * 60 * 1
 
 class MyProxyLogon(TaskAction):
 
-    def __init__(self, config, myproxylen=MINPROXYLENGTH):
-        TaskAction.__init__(self, config)
+    def __init__(self, config, instance, myproxylen=MINPROXYLENGTH):
+        TaskAction.__init__(self, config, instance)
         self.myproxylen = myproxylen
 
     def execute(self, *args, **kwargs):
@@ -38,7 +40,13 @@ class MyProxyLogon(TaskAction):
         timeleft = proxy.getTimeLeft(userproxy)
         if timeleft is None or timeleft <= 0:
             msg = "Impossible to retrieve proxy from %s for %s." %(proxycfg['myProxySvr'], proxycfg['userDN'])
-            setFailedTasks(kwargs['task']['tm_taskname'], "Failed", msg)
+            self.logger.error("Setting %s as failed" % str(kwargs['task']['tm_taskname']))
+            configreq = {'workflow': kwargs['task']['tm_taskname'],
+                         'status': "FAILED",
+                         'subresource': 'failure',
+                         'failure': b64encode(msg)}
+            self.logger.error(str(configreq))
+            self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
             raise StopHandler(msg)
         else:
             kwargs['task']['user_proxy'] = userproxy

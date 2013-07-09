@@ -1,17 +1,19 @@
-from Databases.TaskDB.Interface.Task.SetTasks import setStatusTask
 from PandaServerInterface import killJobs
 
 from TaskWorker.Actions.PanDAAction import PanDAAction
 from TaskWorker.DataObjects.Result import Result
 
 import traceback
+import urllib
+from httplib import HTTPException
+from base64 import b64encode
 
 
 class PanDAKill(PanDAAction):
     """Ask PanDA to kill jobs."""
 
     def execute(self, *args, **kwargs):
-        self.logger.info(" killing injected jobs ")
+        self.logger.debug("Killing injected jobs ")
         killed = []
         try:
             status, killed = killJobs(ids=kwargs['task']['kill_ids'],
@@ -20,14 +22,16 @@ class PanDAKill(PanDAAction):
             if notkilled > 0:
             #not reduce(lambda x, y: x and y, killed)
                 self.logger.error("Not all jobs have been correctly killed")
-            self.logger.info("Task %s: killed %d job, failed to kill %s jobs." %(kwargs['task'], len(kwargs['task']['kill_ids'])-notkilled, notkilled))
+            self.logger.info("Task %s: killed %d job, failed to kill %s jobs." %(kwargs['task']['tm_taskname'], len(kwargs['task']['kill_ids'])-notkilled, notkilled))
         except Exception, exc:
             self.logger.error(str(traceback.format_exc()))
         finally:
             if kwargs['task']['kill_all']:
-                setStatusTask(kwargs['task']['tm_taskname'], 'KILLED')
+                configreq = {'workflow': kwargs['task']['tm_taskname'], 'status': "KILLED"}
+                self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
             else:
-                setStatusTask(kwargs['task']['tm_taskname'], 'SUBMITTED')
+                configreq = {'workflow': kwargs['task']['tm_taskname'], 'status': "SUBMITTED"}
+                self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
         return Result(task=kwargs['task'], result=killed)
 
 if __name__ == '__main__':

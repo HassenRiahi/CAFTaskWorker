@@ -20,6 +20,15 @@ config.TaskWorker.nslaves = cpu_count() + cpu_count()/2
 config.TaskWorker.backend = 'panda'
 #config.TaskWorker.backend = 'glidein'
 
+## Possible values for mode are:
+#   - cmsweb-dev 
+#   - cmsweb-preprod
+#   - cmsweb-prod
+#   - private
+config.TaskWorker.mode = 'private'
+## If 'private' mode then an server url is needed
+config.TaskWorker.resturl = 'mattia-dev01.cern.ch'
+
 #The following parameters assumes the installation in "one box" together with the REST
 config.section_("MyProxy")
 config.MyProxy.serverhostcert = '/data/certs/hostcert.pem' #PLEASE SET ME!!!
