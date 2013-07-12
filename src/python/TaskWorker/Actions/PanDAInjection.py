@@ -169,6 +169,8 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters += '--availableSites=\'%s\' ' %json.dumps(allsites)
         pandajob.jobParameters += '%s ' % task['tm_taskname'] #Needed by ASO
 
+        pandajob.jobName = '%s' % task['tm_taskname'] #Needed by ASO and Dashboard
+
         if 'panda_oldjobid' in job and job['panda_oldjobid']:
             pandajob.parentID = job['panda_oldjobid']
 
