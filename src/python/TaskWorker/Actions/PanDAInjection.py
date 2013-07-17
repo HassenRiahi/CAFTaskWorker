@@ -32,7 +32,7 @@ class PanDAInjection(PanDAAction):
            :arg list taskbuffer.JobSpecs pandajobspecs: the list of specs to inject
            :return: dictionary containining the injection resulting id's."""
         #pandajobspecs = pandajobspecs[0:2]
-        status, injout = submitJobs(jobs=pandajobspecs, proxy=task['user_proxy'], verbose=True)
+        status, injout = submitJobs(self.pandaurls['baseURLSSL'], jobs=pandajobspecs, proxy=task['user_proxy'], verbose=True)
         self.logger.info('PanDA submission exit code: %s' % status)
         jobsetdef = {}
         for jobid, defid, setid in injout:
@@ -58,7 +58,7 @@ class PanDAInjection(PanDAAction):
         :arg str lfnhanger: random string to append at the file lfn
         :arg list str allsites: all possible sites where the job can potentially run
         :return: the list of job sepcs objects."""
-        refreshSpecs(proxy=task['user_proxy'])
+        refreshSpecs(self.pandaurls['baseURL'], proxy=task['user_proxy'])
         oldids = []
         pandajobspec = []
         i = startjobid
@@ -167,7 +167,8 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters += '--publishFiles=%s ' % ('True' if task['tm_publication'] == 'T' else 'False')
         pandajob.jobParameters += '--saveLogs=%s ' % ('True' if task['tm_save_logs'] == 'T' else 'False')
         pandajob.jobParameters += '--availableSites=\'%s\' ' %json.dumps(allsites)
-        pandajob.jobParameters += '%s ' % task['tm_taskname'] #Needed by ASO
+
+        pandajob.jobName = '%s' % task['tm_taskname'] #Needed by ASO and Dashboard
 
         if 'panda_oldjobid' in job and job['panda_oldjobid']:
             pandajob.parentID = job['panda_oldjobid']
