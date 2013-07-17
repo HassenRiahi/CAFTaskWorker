@@ -58,7 +58,7 @@ class PanDASpecs2Jobs(PanDAAction):
                              'subjobdef': jobdef,
                              'subuser': kwargs['task']['tm_user_dn']}
                 self.logger.debug("Retrieving %d jobdef information from task manager db: %s" %(jobdef, str(configreq)))
-                jobgroup = self.server.get('/crabserver/dev/workflowdb', data = configreq)
+                jobgroup = self.server.get(self.resturl, data = configreq)
                 self.logger.debug("Jobgroup information in task manager: %s" % str(jobgroup))
                 jobgroup = jobgroup[0]['result'][0]
                 blocks[jobdef] = jobgroup['tm_data_blocks'] 

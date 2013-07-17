@@ -1,19 +1,17 @@
 import logging
 
-from RESTInteractions import HTTPRequests
-
 
 class TaskAction(object):
     """The abstract father of all actions"""
 
-    def __init__(self, config, instance):
+    def __init__(self, config, server, resturl):
         self.logger = logging.getLogger(type(self).__name__)
         self.config = config
         self.jobtypeMapper = { "Analysis" : "Processing",
                                "PrivateMC" : "Production",
                                "Generic" : "Generic",}
-        self.logger.info("Setting connections to %s" %(instance))
-        self.server = HTTPRequests(instance, self.config.TaskWorker.cmscert, self.config.TaskWorker.cmskey)
+        self.server = server
+        self.resturl = resturl
 
     def execute(self):
         raise NotImplementedError

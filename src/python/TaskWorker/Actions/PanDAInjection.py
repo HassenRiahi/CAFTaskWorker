@@ -249,13 +249,16 @@ class PanDAInjection(PanDAAction):
                     pass
 
                 for jd in outjobdefs:
+                    subblocks = None
+                    if len(blocks) > 0:
+                        resubmittedjobs = ('&subblocks=') + ('&subblocks=').join( map(urllib.quote, map(str, set(blocks))) )
                     configreq = {'workflow': kwargs['task']['tm_taskname'],
                                  'substatus': "SUBMITTED",
                                  'subjobdef': jd,
-                                 'subblocks': ",".join(blocks),
                                  'subuser': kwargs['task']['tm_user_dn'],}
                     self.logger.error("Pushing information centrally %s" %(str(configreq)))
-                    self.server.put('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+                    data = urllib.urlencode(configreq) + '' if subblocks is None else subblocks           
+                    self.server.put(self.resturl, data=data)
                 results.append(Result(task=kwargs['task'], result=jobsetdef))
             except HTTPException, hte:
                 self.logger.error("Server could not acquire any work from the server: \n" +
@@ -264,29 +267,34 @@ class PanDAInjection(PanDAAction):
                 self.logger.error("%s " %(str(traceback.format_exc())))
                 self.logger.error("\turl: %s\n" %(getattr(hte, 'url', 'unknown')))
                 self.logger.error("\tresult: %s\n" %(getattr(hte, 'result', 'unknown')))
+                subblocks = None
+                if len(blocks) > 0:
+                    resubmittedjobs = ('&subblocks=') + ('&subblocks=').join( map(urllib.quote, map(str, set(blocks))) )
                 configreq = {'workflow': kwargs['task']['tm_taskname'],
                              'substatus': "FAILED",
                              'subjobdef': -1,
-                             'subblocks': ",".join(blocks),
                              'subuser': kwargs['task']['tm_user_dn'],
                              'subfailure': b64encode(str(hte)),}
                 self.logger.error("Pushing information centrally %s" %(str(configreq)))
-                self.server.put('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+                data = urllib.urlencode(configreq) + '' if subblocks is None else subblocks
+                self.server.put(self.resturl, data=data)
                 results.append(Result(task=kwargs['task'], warn=msg))
             except Exception, exc:
-                self.logger.error("MMMMM\n " + str(blocks) + " ....\n\n")
                 msg = "Problem %s injecting job group from task %s reading data from blocks %s" % (str(exc), kwargs['task']['tm_taskname'], ",".join(blocks))
                 self.logger.error(msg)
                 self.logger.error(str(traceback.format_exc()))
+                subblocks = None
+                if len(blocks) > 0:
+                    resubmittedjobs = ('&subblocks=') + ('&subblocks=').join( map(urllib.quote, map(str, set(blocks))) ) 
                 configreq = {'workflow': kwargs['task']['tm_taskname'],
                              'substatus': "FAILED",
                              'subjobdef': -1,
-                             'subblocks': ",".join(blocks),
                              'subuser': kwargs['task']['tm_user_dn'],
                              'subfailure': b64encode(str(exc)),}
                 self.logger.error("Pushing information centrally %s" %(str(configreq)))
                 try:
-                    self.server.put('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+                    data = urllib.urlencode(configreq) + '' if subblocks is None else subblocks
+                    self.server.put(self.resturl, data=data)
                     results.append(Result(task=kwargs['task'], warn=msg))
                 except HTTPException, hte:
                     if not hte.headers.get('X-Error-Detail', '') == 'Required object is missing' or \
@@ -307,7 +315,7 @@ class PanDAInjection(PanDAAction):
                          'status': "FAILED",
                          'subresource': 'failure',
                          'failure': b64encode(msg)}
-            self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
             results.append(Result(task=kwargs['task'], err=msg))
         else: #if resulting
             configreq = {'workflow': kwargs['task']['tm_taskname'],
@@ -319,5 +327,5 @@ class PanDAInjection(PanDAAction):
                 resubmittedjobs = ('&resubmittedjobs=') + ('&resubmittedjobs=').join( map(urllib.quote, map(str, set(alloldids))) )
             self.logger.debug("Setting the task as submitted with %s%s " %(str(configreq), '' if resubmittedjobs is None else resubmittedjobs))
             data = urllib.urlencode(configreq) + ('' if resubmittedjobs is None else resubmittedjobs)
-            self.server.post('/crabserver/dev/workflowdb', data = data)
+            self.server.post(self.resturl, data = data)
         return results

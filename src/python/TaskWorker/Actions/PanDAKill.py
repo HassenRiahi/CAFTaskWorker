@@ -28,10 +28,10 @@ class PanDAKill(PanDAAction):
         finally:
             if kwargs['task']['kill_all']:
                 configreq = {'workflow': kwargs['task']['tm_taskname'], 'status': "KILLED"}
-                self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+                self.server.post(self.resturl, data = urllib.urlencode(configreq))
             else:
                 configreq = {'workflow': kwargs['task']['tm_taskname'], 'status': "SUBMITTED"}
-                self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+                self.server.post(self.resturl, data = urllib.urlencode(configreq))
         return Result(task=kwargs['task'], result=killed)
 
 if __name__ == '__main__':

@@ -32,10 +32,10 @@ def handler(status):
         if st[0] == status:
             return st[1]
 
-MODEURL = {'cmsweb-dev': 'cmsweb-dev.cern.ch',
-           'cmsweb-preprod': 'cmsweb-testbed.cern.ch',
-           'cmsweb-prod': 'cmsweb.cern.ch',
-           'private': None,}
+MODEURL = {'cmsweb-dev': {'host': 'cmsweb-dev.cern.ch', 'instance':  'dev'},
+           'cmsweb-preprod': {'host': 'cmsweb-testbed.cern.ch', 'instance': 'preprod'},
+           'cmsweb-prod': {'host': 'cmsweb.cern.ch', 'instance':  'prod'},
+           'private': {'host': None, 'instance':  'dev'},}
 
 
 def validateConfig(config):
@@ -90,15 +90,20 @@ class MasterWorker(object):
         self.logger = getLogging(quiet, debug)
         self.config = config
         restinstance = None
+        self.resturl = '/crabserver/prod/workflowdb'
         if not self.config.TaskWorker.mode in MODEURL.keys():
             raise ConfigException("No mode provided: need to specify config.TaskWorker.mode in the configuration")
-        elif MODEURL[self.config.TaskWorker.mode] is not None:
-            restinstance = MODEURL[self.config.TaskWorker.mode]
+        elif MODEURL[self.config.TaskWorker.mode]['host'] is not None:
+            restinstance = MODEURL[self.config.TaskWorker.mode]['host']
+            self.resturl = self.resturl.replace('prod', MODEURL[self.config.TaskWorker.mode]['instance'])
         else:
             restinstance = self.config.TaskWorker.resturl
+            self.resturl = self.resturl.replace('prod', MODEURL[self.config.TaskWorker.mode]['instance'])
+        if self.resturl is None or restinstance is None:
+            raise ConfigException("No correct mode provided: need to specify config.TaskWorker.mode in the configuration")
         self.server = HTTPRequests(restinstance, self.config.TaskWorker.cmscert, self.config.TaskWorker.cmskey)
         self.logger.debug("Hostcert: %s, hostkey: %s" %(str(self.config.TaskWorker.cmscert), str(self.config.TaskWorker.cmskey)))
-        self.slaves = Worker(self.config, restinstance)
+        self.slaves = Worker(self.config, restinstance, self.resturl)
         self.slaves.begin()
 
     def _lockWork(self, limit, getstatus, setstatus):
@@ -110,7 +115,7 @@ class MasterWorker(object):
             * the server has an internal error"""  
         configreq = {'subresource': 'process', 'workername': self.config.TaskWorker.name, 'getstatus': getstatus, 'limit': limit, 'status': setstatus}
         try:
-            self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
         except HTTPException, hte:
             if not hte.headers.get('X-Error-Detail', '') == 'Required object is missing' or \
                not hte.headers.get('X-Error-Http', -1) == '400':
@@ -131,7 +136,7 @@ class MasterWorker(object):
         configreq = {'limit': limit, 'workername': self.config.TaskWorker.name, 'getstatus': getstatus}
         pendingwork = []
         try:
-            pendingwork = self.server.get('/crabserver/dev/workflowdb', data = configreq)[0]['result']
+            pendingwork = self.server.get(self.resturl, data = configreq)[0]['result']
         except HTTPException, hte:
             self.logger.error("Could not get any work from the server: \n" +
                               "\tstatus: %s\n" %(hte.headers.get('X-Error-Http', 'unknown')) +
@@ -147,7 +152,7 @@ class MasterWorker(object):
 
     def updateWork(self, task, status):
         configreq = {'workflow': task, 'status': status, 'subresource': 'state'}
-        self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+        self.server.post(self.resturl, data = urllib.urlencode(configreq))
 
     def updateFinished(self, finished):
         for res in finished:
@@ -158,7 +163,7 @@ class MasterWorker(object):
                              'subresource': 'failure',
                              'failure': b64encode(res.error)}
                 self.logger.error("Issue: %s" % (str(res.error)))
-                self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+                self.server.post(self.resturl, data = urllib.urlencode(configreq))
 
     def algorithm(self):
         """I'm the intelligent guy taking care of getting the work

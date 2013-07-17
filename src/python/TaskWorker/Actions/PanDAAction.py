@@ -7,8 +7,8 @@ class PanDAAction(TaskAction):
        better to leave this here in order to eventually be ready to
        support specific PanDA interaction needs."""
 
-    def __init__(self, pandaconfig, instance):
-        TaskAction.__init__(self, pandaconfig, instance)
+    def __init__(self, pandaconfig, server, resturl):
+        TaskAction.__init__(self, pandaconfig, server, resturl)
 #        ## TODO check some specific config? otherwise this can probably be removed  and default init could be used
 #        #print "specific panda action init", self
 

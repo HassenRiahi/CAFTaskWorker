@@ -14,7 +14,7 @@ from TaskWorker.WorkerExceptions import WorkerHandlerException
 global WORKER_CONFIG
 
 
-def processWorker(inputs, results, instance):
+def processWorker(inputs, results, instance, resturl):
     """Wait for an reference to appear in the input queue, call the referenced object
        and write the output in the output queue.
 
@@ -38,7 +38,7 @@ def processWorker(inputs, results, instance):
         t0 = time.time()
         logger.debug("%s: Starting %s on %s" %(procName, str(work), task['tm_taskname']))
         try:
-            outputs = work(instance, WORKER_CONFIG, task, inputargs)
+            outputs = work(instance, resturl, WORKER_CONFIG, task, inputargs)
         except WorkerHandlerException, we:
             outputs = Result(task=task, err=str(we))
         except Exception, exc:
@@ -62,10 +62,12 @@ class Worker(object):
     """Worker class providing all the functionalities to manage all the slaves
        and distribute the work"""
 
-    def __init__(self, config, instance):
+    def __init__(self, config, instance, resturl):
         """Initializer
 
-        :arg WMCore.Configuration config: input TaskWorker configuration."""
+        :arg WMCore.Configuration config: input TaskWorker configuration
+        :arg str instance: the hostname where the rest interface is running
+        :arg str resturl: the rest base url to contact."""
         self.logger = logging.getLogger(type(self).__name__)
         global WORKER_CONFIG
         WORKER_CONFIG = config
@@ -78,6 +80,7 @@ class Worker(object):
         self.results = multiprocessing.Queue()
         self.working = {}
         self.instance = instance
+        self.resturl = resturl
 
     def __del__(self):
         """When deleted shutting down all slaves"""
@@ -89,7 +92,7 @@ class Worker(object):
             # Starting things up
             for x in range(self.nworkers):
                 self.logger.debug("Starting process %i" %x)
-                p = multiprocessing.Process(target = processWorker, args = (self.inputs, self.results, self.instance))
+                p = multiprocessing.Process(target = processWorker, args = (self.inputs, self.results, self.instance, self.resturl))
                 p.start()
                 self.pool.append(p)
         self.logger.info("Started %d slaves"% len(self.pool))

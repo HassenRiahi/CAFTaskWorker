@@ -39,7 +39,7 @@ class Splitter(TaskAction):
                          'status': "FAILED",
                          'subresource': 'failure',
                          'failure': b64encode(msg)}
-            self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
             raise StopHandler(msg)
         return Result(task=kwargs['task'], result=factory)
 

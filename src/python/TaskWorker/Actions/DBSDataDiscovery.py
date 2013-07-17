@@ -30,7 +30,7 @@ class DBSDataDiscovery(DataDiscovery):
                          'status': "FAILED",
                          'subresource': 'failure',
                          'failure': b64encode(msg)}
-            self.server.post('/crabserver/dev/workflowdb', data = urllib.urlencode(configreq))
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
             raise StopHandler(msg)
         locations = map(lambda x: map(lambda y: y.host, x.locations), ll)
         locationsmap = dict(zip(blocks, locations))
