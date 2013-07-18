@@ -10,7 +10,7 @@ class PanDAAction(TaskAction):
     def __init__(self, pandaconfig, server, resturl):
         TaskAction.__init__(self, pandaconfig, server, resturl)
         #each PanDAAction needs to know the PandaServer URLs to use
-        self.pandaurls = self.server.get(self.resturl, data={'subresource':'backendurls'})[0]['result'][0]
+        self.pandaurls = self.server.get(self.resturl.replace('workflowdb', 'info'), data={'subresource':'backendurls'})[0]['result'][0]
 
     def translateSiteName(self, sites):
         return ['ANALY_'+ s for s in sites]
