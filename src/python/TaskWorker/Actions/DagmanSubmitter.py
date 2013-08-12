@@ -43,6 +43,7 @@ MASTER_DAG_SUBMIT_FILE = CRAB_HEADERS + CRAB_META_HEADERS + \
 +CRAB_Workflow = %(workflow)s
 +CRAB_UserDN = %(userdn)s
 universe = local
+# Can't ever remember if this is quotes or not
 +CRAB_ReqName = "%(requestname)s"
 scratch = %(scratch)s
 bindir = %(bindir)s
@@ -59,7 +60,7 @@ remove_kill_sig = SIGUSR1
 +HoldKillSig = "SIGUSR1"
 on_exit_hold = (ExitCode =!= UNDEFINED && ExitCode != 0)
 +Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId, " %(additional_environment_options)s")
-+RemoteCondorSetupa = "%(remote_condor_setup)s"
++RemoteCondorSetup = "%(remote_condor_setup)s"
 +TaskType = "ROOT"
 X509UserProxy = %(userproxy)s
 queue 1
@@ -208,14 +209,14 @@ class DagmanSubmitter(TaskAction.TaskAction):
         addCRABInfoToClassAd(dagAd, info)
 
         # NOTE: Changes here must be synchronized with the job_submit in DagmanCreator.py in CAFTaskWorker
+        dagAd["Out"] = str(os.path.join(info['scratch'], "request.out"))
+        dagAd["Err"] = str(os.path.join(info['scratch'], "request.err"))
         dagAd["CRAB_Attempt"] = 0
         dagAd["JobUniverse"] = 12
         dagAd["HoldKillSig"] = "SIGUSR1"
-        dagAd["Out"] = os.path.join(info['scratch'], "request.out")
-        dagAd["Err"] = os.path.join(info['scratch'], "request.err")
         dagAd["Cmd"] = cmd
         dagAd['Args'] = arg
-        dagAd["TransferInput"] = info['inputFilesString']
+        dagAd["TransferInput"] = str(info['inputFilesString'])
         dagAd["LeaveJobInQueue"] = classad.ExprTree("(JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))")
         dagAd["TransferOutput"] = info['outputFilesString']
         dagAd["OnExitRemove"] = classad.ExprTree("( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))")
@@ -238,6 +239,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
                     resultAds = []
                     htcondor.SecMan().invalidateAllSessions()
                     os.environ['X509_USER_PROXY'] = info['userproxy']
+                    htcondor.param['DELEGATE_FULL_JOB_GSI_CREDENTIALS'] = 'true'
                     schedd.submit(dagAd, 1, True, resultAds)
                     schedd.spool(resultAds)
                     wpipe.write("OK")
