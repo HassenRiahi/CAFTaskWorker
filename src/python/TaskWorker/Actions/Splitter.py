@@ -1,12 +1,15 @@
+import urllib
+from httplib import HTTPException
+from base64 import b64encode
+
 from WMCore.DataStructs.Subscription import Subscription
 from WMCore.DataStructs.Workflow import Workflow
 from WMCore.JobSplitting.SplitterFactory import SplitterFactory
 
-from Databases.TaskDB.Interface.Task.SetTasks import setFailedTasks
-
 from TaskWorker.Actions.TaskAction import TaskAction
 from TaskWorker.DataObjects.Result import Result
 from TaskWorker.WorkerExceptions import StopHandler
+
 
 class Splitter(TaskAction):
     """Performing the split operation depending on the
@@ -31,8 +34,12 @@ class Splitter(TaskAction):
             msg = "Splitting %s on %s with %s does not generate any job" %(kwargs['task']['tm_taskname'],
                                                                            kwargs['task']['tm_input_dataset'],
                                                                            kwargs['task']['tm_split_algo'])
-            self.logger.debug(msg)
-            setFailedTasks(kwargs['task']['tm_taskname'], "Failed", msg)
+            self.logger.error("Setting %s as failed" % str(kwargs['task']['tm_taskname']))
+            configreq = {'workflow': kwargs['task']['tm_taskname'],
+                         'status': "FAILED",
+                         'subresource': 'failure',
+                         'failure': b64encode(msg)}
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
             raise StopHandler(msg)
         return Result(task=kwargs['task'], result=factory)
 

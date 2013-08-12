@@ -7,11 +7,10 @@ class PanDAAction(TaskAction):
        better to leave this here in order to eventually be ready to
        support specific PanDA interaction needs."""
 
-    def __init__(self, pandaconfig):
-        #super(TaskAction, self).__init__(config=pandaconfig)
-        TaskAction.__init__(self, pandaconfig)
-        ## TODO check some specific config? otherwise this can probably be removed  and default init could be used
-        #print "specific panda action init", self
+    def __init__(self, pandaconfig, server, resturl):
+        TaskAction.__init__(self, pandaconfig, server, resturl)
+        #each PanDAAction needs to know the PandaServer URLs to use
+        self.pandaurls = self.server.get(self.resturl.replace('workflowdb', 'info'), data={'subresource':'backendurls'})[0]['result'][0]
 
     def translateSiteName(self, sites):
         return ['ANALY_'+ s for s in sites]

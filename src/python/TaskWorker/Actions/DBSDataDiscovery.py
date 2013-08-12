@@ -1,6 +1,8 @@
-from WMCore.WorkQueue.WorkQueueUtils import get_dbs
+import urllib
+from httplib import HTTPException
+from base64 import b64encode
 
-from Databases.TaskDB.Interface.Task.SetTasks import setFailedTasks
+from WMCore.WorkQueue.WorkQueueUtils import get_dbs
 
 from TaskWorker.Actions.DataDiscovery import DataDiscovery
 from TaskWorker.WorkerExceptions import StopHandler
@@ -14,7 +16,7 @@ class DBSDataDiscovery(DataDiscovery):
         dbs = get_dbs(self.config.Services.DBSUrl)
         if kwargs['task']['tm_dbs_url']:
             dbs = get_dbs(kwargs['task']['tm_dbs_url'])
-        self.logger.debug("Data discovery through %s for %s" %(dbs, kwargs['task']))
+        self.logger.debug("Data discovery through %s for %s" %(dbs, kwargs['task']['tm_taskname']))
         # Get the list of blocks for the locations and then call dls.
         # The WMCore DBS3 implementation makes one call to dls for each block
         # with locations = True
@@ -23,7 +25,12 @@ class DBSDataDiscovery(DataDiscovery):
         ll = dbs.dls.getLocations(list(blocks),  showProd = True)
         if len(ll) == 0:
             msg = "No location was found for %s in %s." %(kwargs['task']['tm_input_dataset'],kwargs['task']['tm_dbs_url'])
-            setFailedTasks(kwargs['task']['tm_taskname'], "Failed", msg)
+            self.logger.error("Setting %s as failed" % str(kwargs['task']['tm_taskname']))
+            configreq = {'workflow': kwargs['task']['tm_taskname'],
+                         'status': "FAILED",
+                         'subresource': 'failure',
+                         'failure': b64encode(msg)}
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
             raise StopHandler(msg)
         locations = map(lambda x: map(lambda y: y.host, x.locations), ll)
         locationsmap = dict(zip(blocks, locations))

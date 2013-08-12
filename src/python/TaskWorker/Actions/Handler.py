@@ -2,6 +2,8 @@ import logging
 import time
 import traceback
 
+from RESTInteractions import HTTPRequests
+
 from TaskWorker.Actions.DBSDataDiscovery import DBSDataDiscovery
 from TaskWorker.Actions.MakeFakeFileSet import MakeFakeFileSet
 from TaskWorker.Actions.Splitter import Splitter
@@ -56,12 +58,12 @@ class TaskHandler(object):
                 nextinput = Result(task=self._task, result='StopHandler exception received, controlled stop')
                 break
             except Exception, exc:
-                msg = "Problem handling %s because of %s failure, tracebak follows\n" % (self._task, str(exc))
+                msg = "Problem handling %s because of %s failure, tracebak follows\n" % (self._task['tm_taskname'], str(exc))
                 msg += str(traceback.format_exc())
                 self.logger.error(msg)
                 raise WorkerHandlerException(msg)
             t1 = time.time()
-            self.logger.debug("Finished %s on %s in %d seconds" % (str(work), self._task['tm_taskname'], t1-t0))
+            self.logger.info("Finished %s on %s in %d seconds" % (str(work), self._task['tm_taskname'], t1-t0))
             try:
                 nextinput = output.result
             except AttributeError:
@@ -69,89 +71,98 @@ class TaskHandler(object):
         tot1 = time.time()
         return nextinput
 
-def handleNewTask(config, task, *args, **kwargs):
+def handleNewTask(instance, resturl, config, task, *args, **kwargs):
     """Performs the injection of a new task
 
+    :arg str instance: the hostname where the rest interface is running
+    :arg str resturl: the rest base url to contact
     :arg WMCore.Configuration config: input configuration
     :arg TaskWorker.DataObjects.Task task: the task to work on
     :*args and *kwargs: extra parameters currently not defined
     :return: the handler."""
+    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey)
     handler = TaskHandler(task)
-    handler.addWork( MyProxyLogon(config=config, myproxylen=60*60*24) )
+    handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*60*24) )
     if task['tm_job_type'] == 'Analysis': 
-        handler.addWork( DBSDataDiscovery(config=config) )
+        handler.addWork( DBSDataDiscovery(config=config, server=server, resturl=resturl) )
     elif task['tm_job_type'] == 'PrivateMC': 
-        handler.addWork( MakeFakeFileSet(config=config) )
-    handler.addWork( Splitter(config=config) )
+        handler.addWork( MakeFakeFileSet(config=config, server=server, resturl=resturl) )
+    handler.addWork( Splitter(config=config, server=server, resturl=resturl) )
 
     def glidein(config):
         """Performs the injection of a new task into Glidein
         :arg WMCore.Configuration config: input configuration"""
         raise NotImplementedError
-        #handler.addWork( DagmanCreator(glideinconfig=config) )
+        #handler.addWork( DagmanCreator(glideinconfig=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the injection into PanDA of a new task
         :arg WMCore.Configuration config: input configuration"""
-        handler.addWork( PanDABrokerage(pandaconfig=config) )
-        handler.addWork( PanDAInjection(pandaconfig=config) )
+        handler.addWork( PanDABrokerage(pandaconfig=config, server=server, resturl=resturl) )
+        handler.addWork( PanDAInjection(pandaconfig=config, server=server, resturl=resturl) )
 
     locals()[getattr(config.TaskWorker, 'backend', DEFAULT_BACKEND).lower()](config)
     return handler.actionWork(args)
 
-def handleResubmit(config, task, *args, **kwargs):
+def handleResubmit(instance, resturl, config, task, *args, **kwargs):
     """Performs the re-injection of failed jobs
 
+    :arg str instance: the hostname where the rest interface is running
+    :arg str resturl: the rest base url to contact
     :arg WMCore.Configuration config: input configuration
     :arg TaskWorker.DataObjects.Task task: the task to work on
     :*args and *kwargs: extra parameters currently not defined
     :return: the result of the handler operation."""
+    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey)
     handler = TaskHandler(task)
-    handler.addWork( MyProxyLogon(config=config, myproxylen=60*60*24) )
+    handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*60*24) )
     def glidein(config):
         """Performs the re-injection into Glidein
         :arg WMCore.Configuration config: input configuration"""
         raise NotImplementedError
-        #handler.addWork( DagmanResubmitter(glideinconfig=config) )
+        #handler.addWork( DagmanResubmitter(glideinconfig=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the re-injection into PanDA
         :arg WMCore.Configuration config: input configuration"""
-        handler.addWork( PanDAgetSpecs(pandaconfig=config) )
-        handler.addWork( PanDASpecs2Jobs(pandaconfig=config) )
-        handler.addWork( PanDABrokerage(pandaconfig=config) )
-        handler.addWork( PanDAInjection(pandaconfig=config) )
+        handler.addWork( PanDAgetSpecs(pandaconfig=config, server=server, resturl=resturl) )
+        handler.addWork( PanDASpecs2Jobs(pandaconfig=config, server=server, resturl=resturl) )
+        handler.addWork( PanDABrokerage(pandaconfig=config, server=server, resturl=resturl) )
+        handler.addWork( PanDAInjection(pandaconfig=config, server=server, resturl=resturl) )
 
     locals()[getattr(config.TaskWorker, 'backend', DEFAULT_BACKEND).lower()](config)
     return handler.actionWork(args)
 
-def handleKill(config, task, *args, **kwargs):
+def handleKill(instance, resturl, config, task, *args, **kwargs):
     """Asks to kill jobs
 
+    :arg str instance: the hostname where the rest interface is running
+    :arg str resturl: the rest base url to contact
     :arg WMCore.Configuration config: input configuration
     :arg TaskWorker.DataObjects.Task task: the task to work on
     :*args and *kwargs: extra parameters currently not defined
     :return: the result of the handler operation."""
+    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey)
     handler = TaskHandler(task)
-    handler.addWork( MyProxyLogon(config=config, myproxylen=60*5) )
+    handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*5) )
     def glidein(config):
         """Performs kill of jobs sent through Glidein
         :arg WMCore.Configuration config: input configuration"""
         raise NotImplementedError
-        #handler.addWork( DagmanKiller(glideinconfig=config) )
+        #handler.addWork( DagmanKiller(glideinconfig=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the re-injection into PanDA
         :arg WMCore.Configuration config: input configuration"""
-        handler.addWork( PanDAKill(pandaconfig=config) )
+        handler.addWork( PanDAKill(pandaconfig=config, server=server, resturl=resturl) )
 
     locals()[getattr(config.TaskWorker, 'backend', DEFAULT_BACKEND).lower()](config)
     return handler.actionWork(args, kwargs)
 
 if __name__ == '__main__':
     print "New task"
-    handleNewTask(None, task={})
+    handleNewTask(None, None, None, task={})
     print "\nResubmit task"
-    handleResubmit(task=None)
+    handleResubmit(None, None, None, task={})
     print "\nKill task"
-    handleKill(task=None)
+    handleKill(None, None, None, task={})

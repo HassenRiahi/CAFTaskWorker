@@ -304,7 +304,7 @@ def create_subdag(splitter_result, **kwargs):
         LOGGER.info("Resulting available sites: %s" % ", ".join(availablesites))
 
         if not availablesites:
-            msg = "No site available for submission of task %s" % (kwargs['task'])
+            msg = "No site available for submission of task %s" % (kwargs['task']['tm_taskname'])
             raise TaskWorker.WorkerExceptions.NoAvailableSite(msg)
 
         jobgroupspecs, startjobid = make_specs(kwargs['task'], jobgroup, availablesites, outfiles, startjobid)
