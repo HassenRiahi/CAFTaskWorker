@@ -155,7 +155,7 @@ def fix_perms(count):
     """
     for base_file in ["job_err", "job_out"]:
         try:
-            os.chmod("%s.%s" % (base_file, count),644)
+            os.chmod("%s.%s" % (base_file, count),0644)
         except OSError, oe:
             if oe.errno != errno.ENOENT and oe.errno != errno.EPERM:
                 raise

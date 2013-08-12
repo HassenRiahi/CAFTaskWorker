@@ -54,7 +54,6 @@ PARENT Job%(count)d CHILD ASO%(count)d
 CRAB_HEADERS = \
 """
 +CRAB_ReqName = "%(requestname)s"
-+CRAB_ReqNameExpr = %(requestname)s
 +CRAB_Workflow = %(workflow)s
 +CRAB_JobType = %(jobtype)s
 +CRAB_JobSW = %(jobsw)s
@@ -84,7 +83,6 @@ CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
 CRAB_ReqName = "%(requestname)s"
-CRAB_ReqNameExpr = %(requestname)s
 CRAB_DBSURL = %(dbsurl_flatten)s
 CRAB_PublishDBSURL = %(publishdbsurl_flatten)s
 CRAB_Publish = %(publish)s
@@ -103,7 +101,6 @@ Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
 # args changed...
-#Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles) --dbs_url=$(CRAB_DBSURL) --publish_dbs_url=$(CRAB_PublishDBSURL) --publishFiles=$(CRAB_Publish) --availableSites=$(CRAB_AvailableSites) $(CRAB_ReqNameExpr) "
 
 Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles)"
 
