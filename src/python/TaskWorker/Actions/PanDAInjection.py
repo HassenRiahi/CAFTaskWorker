@@ -34,6 +34,9 @@ class PanDAInjection(PanDAAction):
         #pandajobspecs = pandajobspecs[0:2]
         status, injout = submitJobs(self.pandaurls['baseURLSSL'], jobs=pandajobspecs, proxy=task['user_proxy'], verbose=True)
         self.logger.info('PanDA submission exit code: %s' % status)
+        if status != 0:
+            msg = "Cannot submit jobs of task %s to Panda. Exit code %s " % (task['tm_taskname'], status)
+            raise PanDAException(msg)
         jobsetdef = {}
         for jobid, defid, setid in injout:
             if setid['jobsetID'] in jobsetdef:

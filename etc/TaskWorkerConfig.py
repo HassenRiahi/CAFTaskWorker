@@ -18,6 +18,10 @@ config.TaskWorker.polling = 60 #seconds
 config.TaskWorker.nslaves = cpu_count() + cpu_count()/2
 config.TaskWorker.backend = 'panda'
 #config.TaskWorker.backend = 'glidein'
+## the parameters here below are used to contact cmsweb services for the REST-DB interactions 
+# usually this is a proxy for private deployment or a service certificate registered in CMS VO
+config.TaskWorker.cmscert = '/tmp/x509up_u15305'
+config.TaskWorker.cmskey = '/tmp/x509up_u15305'
 
 ## Possible values for mode are:
 #   - cmsweb-dev 
