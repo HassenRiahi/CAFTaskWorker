@@ -31,6 +31,10 @@ class PanDAInjection(PanDAAction):
            :arg TaskWorker.DataObject.Task task: the task to work on
            :arg list taskbuffer.JobSpecs pandajobspecs: the list of specs to inject
            :return: dictionary containining the injection resulting id's."""
+        #check the number of the jobs. Panda does not allow to submit more than 5000 jobs
+        if len(pandajobspecs) > 5000:
+            msg = "Cannot submit jobs of task %s to Panda. More than 5000 jobs have been generated" % (task['tm_taskname'])
+            raise PanDAException(msg)
         #pandajobspecs = pandajobspecs[0:2]
         status, injout = submitJobs(self.pandaurls['baseURLSSL'], jobs=pandajobspecs, proxy=task['user_proxy'], verbose=True)
         self.logger.info('PanDA submission exit code: %s' % status)
