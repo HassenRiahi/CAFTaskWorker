@@ -17,7 +17,7 @@ class PanDAKill(PanDAAction):
         killed = []
         try:
             status, killed = killJobs(self.pandaurls['baseURLSSL'], ids=kwargs['task']['kill_ids'],
-                                      proxy=kwargs['task']['user_proxy'])
+                                      proxy=kwargs['task']['user_proxy'], code=9)
             notkilled = len([res for res in killed if not res])
             if notkilled > 0:
             #not reduce(lambda x, y: x and y, killed)
