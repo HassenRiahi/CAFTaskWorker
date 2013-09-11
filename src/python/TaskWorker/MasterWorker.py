@@ -20,6 +20,8 @@ from TaskWorker.Worker import Worker
 from TaskWorker.WorkerExceptions import *
 from TaskWorker.Actions.Handler import handleResubmit, handleNewTask, handleKill
 
+from TaskWorker import __version__
+
 ## NOW placing this here, then to be verified if going into Action.Handler, or TSM
 ## This is a list because we want to preserve the order
 STATE_ACTIONS_MAP = [("NEW", handleNewTask), ("KILL", handleKill), ("RESUBMIT", handleResubmit)]
@@ -101,18 +103,18 @@ class MasterWorker(object):
             self.resturl = self.resturl.replace('prod', MODEURL[self.config.TaskWorker.mode]['instance'])
         if self.resturl is None or restinstance is None:
             raise ConfigException("No correct mode provided: need to specify config.TaskWorker.mode in the configuration")
-        self.server = HTTPRequests(restinstance, self.config.TaskWorker.cmscert, self.config.TaskWorker.cmskey)
+        self.server = HTTPRequests(restinstance, self.config.TaskWorker.cmscert, self.config.TaskWorker.cmskey, version=__version__)
         self.logger.debug("Hostcert: %s, hostkey: %s" %(str(self.config.TaskWorker.cmscert), str(self.config.TaskWorker.cmskey)))
         self.slaves = Worker(self.config, restinstance, self.resturl)
         self.slaves.begin()
 
     def _lockWork(self, limit, getstatus, setstatus):
         """Today this is alays returning true, because we do not want the worker to day if
-           the server endpoint is not avaialable. 
+           the server endpoint is not avaialable.
            Prints a log entry if answer is greater then 400:
             * the server call succeeded or
             * the server could not find anything to update or
-            * the server has an internal error"""  
+            * the server has an internal error"""
         configreq = {'subresource': 'process', 'workername': self.config.TaskWorker.name, 'getstatus': getstatus, 'limit': limit, 'status': setstatus}
         try:
             self.server.post(self.resturl, data = urllib.urlencode(configreq))

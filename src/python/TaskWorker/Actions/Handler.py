@@ -16,6 +16,7 @@ from TaskWorker.Actions.MyProxyLogon import MyProxyLogon
 from TaskWorker.WorkerExceptions import WorkerHandlerException, StopHandler
 from TaskWorker.DataObjects.Result import Result
 ## from TaskWorker.Actions.Dagman import DagmanCreator, DagmanResubmitter, DagmanKiller
+from TaskWorker import __version__
 
 DEFAULT_BACKEND = 'panda'
 
@@ -80,12 +81,12 @@ def handleNewTask(instance, resturl, config, task, *args, **kwargs):
     :arg TaskWorker.DataObjects.Task task: the task to work on
     :*args and *kwargs: extra parameters currently not defined
     :return: the handler."""
-    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey)
+    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey, version=__version__)
     handler = TaskHandler(task)
     handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*60*24) )
-    if task['tm_job_type'] == 'Analysis': 
+    if task['tm_job_type'] == 'Analysis':
         handler.addWork( DBSDataDiscovery(config=config, server=server, resturl=resturl) )
-    elif task['tm_job_type'] == 'PrivateMC': 
+    elif task['tm_job_type'] == 'PrivateMC':
         handler.addWork( MakeFakeFileSet(config=config, server=server, resturl=resturl) )
     handler.addWork( Splitter(config=config, server=server, resturl=resturl) )
 
@@ -113,7 +114,7 @@ def handleResubmit(instance, resturl, config, task, *args, **kwargs):
     :arg TaskWorker.DataObjects.Task task: the task to work on
     :*args and *kwargs: extra parameters currently not defined
     :return: the result of the handler operation."""
-    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey)
+    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey, version=__version__)
     handler = TaskHandler(task)
     handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*60*24) )
     def glidein(config):
@@ -142,7 +143,7 @@ def handleKill(instance, resturl, config, task, *args, **kwargs):
     :arg TaskWorker.DataObjects.Task task: the task to work on
     :*args and *kwargs: extra parameters currently not defined
     :return: the result of the handler operation."""
-    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey)
+    server = HTTPRequests(instance, config.TaskWorker.cmscert, config.TaskWorker.cmskey, version=__version__)
     handler = TaskHandler(task)
     handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*5) )
     def glidein(config):
