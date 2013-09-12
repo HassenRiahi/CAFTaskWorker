@@ -22,7 +22,8 @@ class DataDiscovery(TaskAction):
         self.logger.debug(" Formatting data discovery output ")
         # TEMPORARY
         secmsmap = {}
-        sbj = SiteDBJSON()
+        sbj = SiteDBJSON({"key":self.config.MyProxy.serverhostkey,
+                          "cert":self.config.MyProxy.serverhostcert})
 
         wmfiles = []
         lumicounter = evecounter = 0
