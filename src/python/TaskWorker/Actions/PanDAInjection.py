@@ -265,7 +265,7 @@ class PanDAInjection(PanDAAction):
                                  'subjobdef': jd,
                                  'subuser': kwargs['task']['tm_user_dn'],}
                     self.logger.error("Pushing information centrally %s" %(str(configreq)))
-                    data = urllib.urlencode(configreq) + '' if subblocks is None else subblocks           
+                    data = urllib.urlencode(configreq) + '' if subblocks is None else subblocks
                     self.server.put(self.resturl, data=data)
                 results.append(Result(task=kwargs['task'], result=jobsetdef))
             except HTTPException, hte:
@@ -293,7 +293,7 @@ class PanDAInjection(PanDAAction):
                 self.logger.error(str(traceback.format_exc()))
                 subblocks = None
                 if len(blocks) > 0:
-                    resubmittedjobs = ('&subblocks=') + ('&subblocks=').join( map(urllib.quote, map(str, set(blocks))) ) 
+                    resubmittedjobs = ('&subblocks=') + ('&subblocks=').join( map(urllib.quote, map(str, set(blocks))) )
                 configreq = {'workflow': kwargs['task']['tm_taskname'],
                              'substatus': "FAILED",
                              'subjobdef': -1,
