@@ -30,26 +30,27 @@ class DataDiscovery(TaskAction):
             wmfile = File(lfn=lfn, events=infos['NumberOfEvents'], size=infos['Size'], checksums=infos['Checksums'])
             wmfile['block'] = infos['BlockName']
             wmfile['locations'] = []
-            for se in locations[infos['BlockName']]:
-                if se not in secmsmap:
-                    self.logger.debug("Translating SE %s" %se)
-                    try:
-                        secmsmap[se] = sbj.seToCMSName(se)
-                    except KeyError, ke:
-                        self.logger.error("Impossible translating %s to a CMS name through SiteDB" %se)
-                        secmsmap[se] = ''
-                if se in secmsmap:
-                    if type(secmsmap[se]) == list:
-                        wmfile['locations'].extend(secmsmap[se])
-                    else:
-                        wmfile['locations'].append(secmsmap[se])
-            wmfile['workflow'] = requestname
-            evecounter += infos['NumberOfEvents']
-            for run, lumis in infos['Lumis'].iteritems():
-                #self.logger.debug(' - adding run %d and lumis %s' %(run, lumis))
-                wmfile.addRun(Run(run, *lumis))
-                lumicounter += len(lumis)
-            wmfiles.append(wmfile)
+            if locations.has_key(infos['BlockName']):
+                for se in locations[infos['BlockName']]:
+                    if se not in secmsmap:
+                        self.logger.debug("Translating SE %s" %se)
+                        try:
+                            secmsmap[se] = sbj.seToCMSName(se)
+                        except KeyError, ke:
+                            self.logger.error("Impossible translating %s to a CMS name through SiteDB" %se)
+                            secmsmap[se] = ''
+                    if se in secmsmap:
+                        if type(secmsmap[se]) == list:
+                            wmfile['locations'].extend(secmsmap[se])
+                        else:
+                            wmfile['locations'].append(secmsmap[se])
+                wmfile['workflow'] = requestname
+                evecounter += infos['NumberOfEvents']
+                for run, lumis in infos['Lumis'].iteritems():
+                    #self.logger.debug(' - adding run %d and lumis %s' %(run, lumis))
+                    wmfile.addRun(Run(run, *lumis))
+                    lumicounter += len(lumis)
+                wmfiles.append(wmfile)
 
         self.logger.debug('Tot events found: %d' %evecounter)
         self.logger.debug('Tot lumis found: %d' %lumicounter)
