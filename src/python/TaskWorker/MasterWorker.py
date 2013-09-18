@@ -16,6 +16,7 @@ from WMCore.Configuration import loadConfigurationFile, Configuration
 #CAFUtilities dependencies
 from RESTInteractions import HTTPRequests
 
+from TaskWorker.TestWorker import TestWorker
 from TaskWorker.Worker import Worker
 from TaskWorker.WorkerExceptions import *
 from TaskWorker.Actions.Handler import handleResubmit, handleNewTask, handleKill
@@ -61,7 +62,7 @@ def validateDbConfig(config):
 class MasterWorker(object):
     """I am the master of the TaskWorker"""
 
-    def __init__(self, config, quiet, debug):
+    def __init__(self, config, quiet, debug, test=False):
         """Initializer
 
         :arg WMCore.Configuration config: input TaskWorker configuration
@@ -75,11 +76,15 @@ class MasterWorker(object):
             :arg bool debug: it tells if needs a verbose logger
             :return logger: a logger with the appropriate logger level."""
 
-            logHandler = MultiProcessingLog('twlog.log', when="midnight")
-            logFormatter = \
-                logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
-            logHandler.setFormatter(logFormatter)
-            logging.getLogger().addHandler(logHandler)
+            if self.TEST:
+                #if we are testing log to the console is easier
+                logging.getLogger().addHandler(logging.StreamHandler())
+            else:
+                logHandler = MultiProcessingLog('twlog.log', when="midnight")
+                logFormatter = \
+                    logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
+                logHandler.setFormatter(logFormatter)
+                logging.getLogger().addHandler(logHandler)
             loglevel = logging.INFO
             if quiet:
                 loglevel = logging.WARNING
@@ -89,6 +94,7 @@ class MasterWorker(object):
             logger = logging.getLogger()
             logger.debug("Logging level initialized to %s." %loglevel)
             return logger
+        self.TEST = test
         self.logger = getLogging(quiet, debug)
         self.config = config
         restinstance = None
@@ -104,8 +110,11 @@ class MasterWorker(object):
         if self.resturl is None or restinstance is None:
             raise ConfigException("No correct mode provided: need to specify config.TaskWorker.mode in the configuration")
         self.server = HTTPRequests(restinstance, self.config.TaskWorker.cmscert, self.config.TaskWorker.cmskey, version=__version__)
-        self.logger.debug("Hostcert: %s, hostkey: %s" %(str(self.config.TaskWorker.cmscert), str(self.config.TaskWorker.cmskey)))
-        self.slaves = Worker(self.config, restinstance, self.resturl)
+        self.logger.debug("Hostcert: %s, hostkey: %s" % (str(self.config.TaskWorker.cmscert), str(self.config.TaskWorker.cmskey)))
+        if self.TEST:
+            self.slaves = TestWorker(self.config, restinstance, self.resturl)
+        else:
+            self.slaves = Worker(self.config, restinstance, self.resturl)
         self.slaves.begin()
 
     def _lockWork(self, limit, getstatus, setstatus):
@@ -154,7 +163,7 @@ class MasterWorker(object):
 
     def updateWork(self, task, status):
         configreq = {'workflow': task, 'status': status, 'subresource': 'state'}
-        self.server.post(self.resturl, data = urllib.urlencode(configreq))
+        self.server.post(self.resturl, data=urllib.urlencode(configreq))
 
     def updateFinished(self, finished):
         for res in finished:
@@ -165,7 +174,7 @@ class MasterWorker(object):
                              'subresource': 'failure',
                              'failure': b64encode(res.error)}
                 self.logger.error("Issue: %s" % (str(res.error)))
-                self.server.post(self.resturl, data = urllib.urlencode(configreq))
+                self.server.post(self.resturl, data=urllib.urlencode(configreq))
 
     def algorithm(self):
         """I'm the intelligent guy taking care of getting the work
@@ -189,8 +198,12 @@ class MasterWorker(object):
 
             finished = self.slaves.checkFinished()
             self.updateFinished(finished)
+            if self.TEST:
+                #if we are testing we just do one cycle
+                break
 
             time.sleep(self.config.TaskWorker.polling)
+
         self.logger.debug("Stopping")
 
     def __del__(self):
@@ -200,25 +213,24 @@ class MasterWorker(object):
 if __name__ == '__main__':
     from optparse import OptionParser
 
-    usage  = "usage: %prog [options] [args]"
+    usage = "usage: %prog [options] [args]"
     parser = OptionParser(usage=usage)
 
-    parser.add_option( "-d", "--debug",
-                       action = "store_true",
-                       dest = "debug",
-                       default = False,
-                       help = "print extra messages to stdout" )
-    parser.add_option( "-q", "--quiet",
-                       action = "store_true",
-                       dest = "quiet",
-                       default = False,
-                       help = "don't print any messages to stdout" )
-
-    parser.add_option( "--config",
-                       dest = "config",
-                       default = None,
-                       metavar = "FILE",
-                       help = "configuration file path" )
+    parser.add_option("-d", "--debug",
+                       action="store_true",
+                       dest="debug",
+                       default=False,
+                       help="print extra messages to stdout")
+    parser.add_option("-q", "--quiet",
+                       action="store_true",
+                       dest="quiet",
+                       default=False,
+                       help="don't print any messages to stdout")
+    parser.add_option("--config",
+                       dest="config",
+                       default=None,
+                       metavar="FILE",
+                       help="configuration file path")
 
     (options, args) = parser.parse_args()
 

@@ -51,7 +51,7 @@ class PanDASpecs2Jobs(PanDAAction):
         ## here converting the grouping into proper JobGroup-Jobs
         for jobdef in regroupjobs:
             jobgroup = blocks.get(jobdef, None)
-            if jobgroup is None: 
+            if jobgroup is None:
                 configreq = {'subresource': 'jobgroup',
                              'subjobdef': jobdef,
                              'subuser': kwargs['task']['tm_user_dn']}
@@ -59,7 +59,7 @@ class PanDASpecs2Jobs(PanDAAction):
                 jobgroup = self.server.get(self.resturl, data = configreq)
                 self.logger.debug("Jobgroup information in task manager: %s" % str(jobgroup))
                 jobgroup = jobgroup[0]['result'][0]
-                blocks[jobdef] = jobgroup['tm_data_blocks'] 
+                blocks[jobdef] = jobgroup['tm_data_blocks']
             jg = WMJobGroup()
             for job in regroupjobs[jobdef]:
                 parser = PassThroughOptionParser()

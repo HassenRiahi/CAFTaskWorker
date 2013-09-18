@@ -13,6 +13,7 @@ from TaskWorker.Actions.PanDAgetSpecs import PanDAgetSpecs
 from TaskWorker.Actions.PanDAKill import PanDAKill
 from TaskWorker.Actions.PanDASpecs2Jobs import PanDASpecs2Jobs
 from TaskWorker.Actions.MyProxyLogon import MyProxyLogon
+from TaskWorker.Actions.LumiMaskBuilder import LumiMaskBuilder
 from TaskWorker.WorkerExceptions import WorkerHandlerException, StopHandler
 from TaskWorker.DataObjects.Result import Result
 ## from TaskWorker.Actions.Dagman import DagmanCreator, DagmanResubmitter, DagmanKiller
@@ -86,6 +87,7 @@ def handleNewTask(instance, resturl, config, task, *args, **kwargs):
     handler.addWork( MyProxyLogon(config=config, server=server, resturl=resturl, myproxylen=60*60*24) )
     if task['tm_job_type'] == 'Analysis':
         handler.addWork( DBSDataDiscovery(config=config, server=server, resturl=resturl) )
+        handler.addWork( LumiMaskBuilder(config=config, server=server, resturl=resturl) )
     elif task['tm_job_type'] == 'PrivateMC':
         handler.addWork( MakeFakeFileSet(config=config, server=server, resturl=resturl) )
     handler.addWork( Splitter(config=config, server=server, resturl=resturl) )
