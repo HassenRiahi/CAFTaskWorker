@@ -175,8 +175,17 @@ class PanDAInjection(PanDAAction):
         pandajob.jobParameters += '--saveLogs=%s ' % ('True' if task['tm_save_logs'] == 'T' else 'False')
         pandajob.jobParameters += '--availableSites=\'%s\' ' %json.dumps(allsites)
 
-        pandajob.jobParameters += '--group=%s ' % (task['tm_user_group'] if kwargs['task']['tm_user_group'] else '')
-        pandajob.jobParameters += '--role=%s ' % (task['tm_user_role'] if kwargs['task']['tm_user_role'] else '')
+        pandajob.jobParameters += '--group=%s ' % (task['tm_user_group'] if task['tm_user_group'] else '')
+        pandajob.jobParameters += '--role=%s ' % (task['tm_user_role'] if task['tm_user_role'] else '')
+
+        self.logger.info(type(task['tm_user_infiles']))
+        self.logger.info(task['tm_user_infiles'])
+
+        if task['tm_user_infiles']:
+            addinfilestring = ''
+            for addinfile in task['tm_user_infiles']:
+                addinfilestring += '%s,' % addinfile
+            pandajob.jobParameters += '--userFiles=%s ' % ( addinfilestring[:-1] )
 
         pandajob.jobName = '%s' % task['tm_taskname'] #Needed by ASO and Dashboard
 
