@@ -22,8 +22,8 @@ except ImportError:
 try:
     import WMCore.BossAir.Plugins.RemoteCondorPlugin as RemoteCondorPlugin
 except ImportError:
-    if not htcondor:
-        raise ImportError, "You must have either the RemoteCondorPlugin or htcondor modules"
+    # We'll throw an error later on.
+    pass
 
 CRAB_META_HEADERS = \
 """
@@ -175,6 +175,10 @@ class DagmanSubmitter(TaskAction.TaskAction):
         return name
 
     def execute(self, *args, **kw):
+
+        if not htcondor:
+            raise Exception("HTCondor module is not installed.")
+
         task = kw['task']
         tempDir = args[0][0]
         info = args[0][1]
