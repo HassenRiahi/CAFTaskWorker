@@ -11,9 +11,8 @@ class PanDABrokerage(PanDAAction):
     def execute(self, *args, **kwargs):
         results = []
         for jgroup in args[0]:
-            self.logger.debug(jgroup)
             possiblesites = jgroup.jobs[0]['input_files'][0]['locations']
-            self.logger.debug("possiblesites == " + str(possiblesites))
+            self.logger.debug("Possible sites == " + str(possiblesites))
             if len(possiblesites) == 0:
                 msg = "DLS retourned no sites for the block"
                 self.logger.error(msg)
@@ -25,7 +24,7 @@ class PanDABrokerage(PanDAAction):
             self.logger.debug("white list == %s" % set(siteWhitelist))
             self.logger.debug("black list == %s" % set(siteBlacklist))
             availablesites = list( set(possiblesites) & set(siteWhitelist) if siteWhitelist else set(possiblesites) - set(siteBlacklist) )
-            self.logger.info( 'available sites == %s' % str(availablesites))
+            self.logger.info('Available sites == %s' % str(availablesites))
             fixedsites = set(self.config.Sites.available)
             availablesites = list( set(availablesites) & fixedsites )
             if len(availablesites) == 0:
@@ -33,8 +32,8 @@ class PanDABrokerage(PanDAAction):
                 self.logger.error(msg)
                 results.append(Result(task=kwargs['task'], result=(jgroup, None, []), err=msg))
                 continue
-            self.logger.info("Asking best site to PanDA between %s" % str(availablesites))
-            selectedsite = runBrokerage(proxy=kwargs['task']['user_proxy'],
+            self.logger.info("Asking best site to PanDA between %s. Using %s as pandaserver." % (str(availablesites), self.pandaurls['baseURLSSL']))
+            selectedsite = runBrokerage(self.pandaurls['baseURLSSL'], proxy=kwargs['task']['user_proxy'],
                                         sites=self.translateSiteName(availablesites))[-1]
             self.logger.info("Choosed site after brokering " +str(selectedsite))
             if not selectedsite:

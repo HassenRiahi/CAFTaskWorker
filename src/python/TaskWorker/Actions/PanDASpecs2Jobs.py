@@ -1,16 +1,16 @@
 from WMCore.DataStructs.JobGroup import JobGroup as WMJobGroup
 from WMCore.DataStructs.Job import Job as WMJob
 
-import PandaServerInterface ## change this to specific imports
-
 from TaskWorker.DataObjects.Result import Result
 from TaskWorker.Actions.PanDAAction import PanDAAction
 
 #from urllib import unquote
+import urllib
 from ast import literal_eval
 import shlex
+from optparse import (OptionParser, BadOptionError)
 
-from optparse import (OptionParser,BadOptionError)
+
 class PassThroughOptionParser(OptionParser):
     """
     An unknown option pass-through implementation of OptionParser.
@@ -34,11 +34,12 @@ class PanDASpecs2Jobs(PanDAAction):
        into jobgroups-jobs structure in order to reflect the splitting output."""
 
     def execute(self, *args, **kwargs):
-        self.logger.info("Transforming old specs into jobs.")
+        self.logger.debug("Transforming old specs into jobs.")
+
+        # mapping to cache job def - blocks association
+        blocks = {}
 
         regroupjobs = {}
-        self.logger.error(str(kwargs['task']))
-        self.logger.error(str(args))
         ## grouping in a dictionary can happen here
         for job in args[0]:
             if job.jobDefinitionID in regroupjobs:
@@ -49,6 +50,16 @@ class PanDASpecs2Jobs(PanDAAction):
         jobgroups = []
         ## here converting the grouping into proper JobGroup-Jobs
         for jobdef in regroupjobs:
+            jobgroup = blocks.get(jobdef, None)
+            if jobgroup is None: 
+                configreq = {'subresource': 'jobgroup',
+                             'subjobdef': jobdef,
+                             'subuser': kwargs['task']['tm_user_dn']}
+                self.logger.debug("Retrieving %d jobdef information from task manager db: %s" %(jobdef, str(configreq)))
+                jobgroup = self.server.get(self.resturl, data = configreq)
+                self.logger.debug("Jobgroup information in task manager: %s" % str(jobgroup))
+                jobgroup = jobgroup[0]['result'][0]
+                blocks[jobdef] = jobgroup['tm_data_blocks'] 
             jg = WMJobGroup()
             for job in regroupjobs[jobdef]:
                 parser = PassThroughOptionParser()
@@ -61,14 +72,14 @@ class PanDASpecs2Jobs(PanDAAction):
                 jj['input_files'] = []
                 for infile in literal_eval(options.inputfiles):
                     jj['input_files'].append({'lfn': infile,
-                                              'block': 'unknown',
+                                              'block': blocks[jobdef],
                                               'locations': [ss for ss in literal_eval(options.allsites)]})
                 if options.runlumis:
                     jj['mask']['runAndLumis'] = literal_eval(options.runlumis)
                 jj['panda_oldjobid'] = job.PandaID
                 jj['jobnum'] = options.jobnum
                 jg.add(jj)
-                self.logger.error("MM\n\n%s\n\n" + str(jj))
+            setattr(jg, 'blocks', blocks[jobdef])
             jg.commit()
             jobgroups.append(jg)
 

@@ -7,7 +7,6 @@ config = Configuration()
 
 ## External services url's
 config.section_("Services")
-config.Services.PanDAurl = 'https://pandaserver.cern.ch:8888'
 config.Services.PhEDExurl = 'https://phedex.cern.ch'
 config.Services.DBSUrl = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
 config.Services.MyProxy = 'myproxy.cern.ch'
@@ -19,6 +18,19 @@ config.TaskWorker.polling = 60 #seconds
 config.TaskWorker.nslaves = cpu_count() + cpu_count()/2
 config.TaskWorker.backend = 'panda'
 #config.TaskWorker.backend = 'glidein'
+## the parameters here below are used to contact cmsweb services for the REST-DB interactions 
+# usually this is a proxy for private deployment or a service certificate registered in CMS VO
+config.TaskWorker.cmscert = '/tmp/x509up_u15305'
+config.TaskWorker.cmskey = '/tmp/x509up_u15305'
+
+## Possible values for mode are:
+#   - cmsweb-dev 
+#   - cmsweb-preprod
+#   - cmsweb-prod
+#   - private
+config.TaskWorker.mode = 'private'
+## If 'private' mode then an server url is needed
+config.TaskWorker.resturl = 'mattia-dev01.cern.ch'
 
 #The following parameters assumes the installation in "one box" together with the REST
 config.section_("MyProxy")
