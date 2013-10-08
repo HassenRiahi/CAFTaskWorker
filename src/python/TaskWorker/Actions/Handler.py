@@ -16,7 +16,8 @@ from TaskWorker.Actions.MyProxyLogon import MyProxyLogon
 from TaskWorker.Actions.LumiMaskBuilder import LumiMaskBuilder
 from TaskWorker.WorkerExceptions import WorkerHandlerException, StopHandler
 from TaskWorker.DataObjects.Result import Result
-## from TaskWorker.Actions.Dagman import DagmanCreator, DagmanResubmitter, DagmanKiller
+from TaskWorker.Actions.DagmanCreator import DagmanCreator
+from TaskWorker.Actions.DagmanSubmitter import DagmanSubmitter
 from TaskWorker import __version__
 
 DEFAULT_BACKEND = 'panda'
@@ -95,8 +96,8 @@ def handleNewTask(instance, resturl, config, task, *args, **kwargs):
     def glidein(config):
         """Performs the injection of a new task into Glidein
         :arg WMCore.Configuration config: input configuration"""
-        raise NotImplementedError
-        #handler.addWork( DagmanCreator(glideinconfig=config, server=server, resturl=resturl) )
+        handler.addWork( DagmanCreator(glideinconfig=config, server=server, resturl=resturl) )
+        handler.addWork( DagmanSubmitter(glideinconfig=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the injection into PanDA of a new task
@@ -123,7 +124,6 @@ def handleResubmit(instance, resturl, config, task, *args, **kwargs):
         """Performs the re-injection into Glidein
         :arg WMCore.Configuration config: input configuration"""
         raise NotImplementedError
-        #handler.addWork( DagmanResubmitter(glideinconfig=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the re-injection into PanDA
@@ -152,7 +152,6 @@ def handleKill(instance, resturl, config, task, *args, **kwargs):
         """Performs kill of jobs sent through Glidein
         :arg WMCore.Configuration config: input configuration"""
         raise NotImplementedError
-        #handler.addWork( DagmanKiller(glideinconfig=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the re-injection into PanDA

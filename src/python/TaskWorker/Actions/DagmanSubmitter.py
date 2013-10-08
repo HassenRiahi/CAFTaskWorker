@@ -43,7 +43,8 @@ MASTER_DAG_SUBMIT_FILE = CRAB_HEADERS + CRAB_META_HEADERS + \
 +CRAB_Workflow = %(workflow)s
 +CRAB_UserDN = %(userdn)s
 universe = local
-+CRAB_ReqName = %(requestname)s
+# Can't ever remember if this is quotes or not
++CRAB_ReqName = "%(requestname)s"
 scratch = %(scratch)s
 bindir = %(bindir)s
 output = $(scratch)/request.out
@@ -58,8 +59,8 @@ on_exit_remove = ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 
 remove_kill_sig = SIGUSR1
 +HoldKillSig = "SIGUSR1"
 on_exit_hold = (ExitCode =!= UNDEFINED && ExitCode != 0)
-+Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId)
-+RemoteCondorSetupa = "%(remote_condor_setup)s"
++Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId, " %(additional_environment_options)s")
++RemoteCondorSetup = "%(remote_condor_setup)s"
 +TaskType = "ROOT"
 X509UserProxy = %(userproxy)s
 queue 1
@@ -181,7 +182,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
         cwd = os.getcwd()
         os.chdir(tempDir)
 
-        inputFiles = ['gWMS-CMSRunAnaly.sh', task['tm_transformation'], 'cmscp.py', 'RunJobs.dag']
+        inputFiles = ['gWMS-CMSRunAnalysis.sh', task['tm_transformation'], 'cmscp.py', 'RunJobs.dag']
         inputFiles += [i for i in os.listdir('.') if i.startswith('Job.submit')]
         info['inputFilesString'] = ", ".join(inputFiles)
         outputFiles = ["RunJobs.dag.dagman.out", "RunJobs.dag.rescue.001"]
@@ -208,20 +209,20 @@ class DagmanSubmitter(TaskAction.TaskAction):
         addCRABInfoToClassAd(dagAd, info)
 
         # NOTE: Changes here must be synchronized with the job_submit in DagmanCreator.py in CAFTaskWorker
+        dagAd["Out"] = str(os.path.join(info['scratch'], "request.out"))
+        dagAd["Err"] = str(os.path.join(info['scratch'], "request.err"))
         dagAd["CRAB_Attempt"] = 0
         dagAd["JobUniverse"] = 12
         dagAd["HoldKillSig"] = "SIGUSR1"
-        dagAd["Out"] = os.path.join(info['scratch'], "request.out")
-        dagAd["Err"] = os.path.join(info['scratch'], "request.err")
         dagAd["Cmd"] = cmd
         dagAd['Args'] = arg
-        dagAd["TransferInput"] = info['inputFilesString']
+        dagAd["TransferInput"] = str(info['inputFilesString'])
         dagAd["LeaveJobInQueue"] = classad.ExprTree("(JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))")
         dagAd["TransferOutput"] = info['outputFilesString']
         dagAd["OnExitRemove"] = classad.ExprTree("( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))")
         dagAd["OtherJobRemoveRequirements"] = classad.ExprTree("DAGManJobId =?= ClusterId")
         dagAd["RemoveKillSig"] = "SIGUSR1"
-        dagAd["Environment"] = classad.ExprTree('strcat("PATH=/usr/bin:/bin CONDOR_ID=", ClusterId, ".", ProcId)')
+        dagAd["Environment"] = classad.ExprTree('strcat("PATH=/usr/bin:/bin CONDOR_ID=", ClusterId, ".", ProcId," %s")' % info['additional_environment_options'])
         dagAd["RemoteCondorSetup"] = info['remote_condor_setup']
         dagAd["Requirements"] = classad.ExprTree('true || false')
         dagAd["TaskType"] = "ROOT"
@@ -238,6 +239,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
                     resultAds = []
                     htcondor.SecMan().invalidateAllSessions()
                     os.environ['X509_USER_PROXY'] = info['userproxy']
+                    htcondor.param['DELEGATE_FULL_JOB_GSI_CREDENTIALS'] = 'true'
                     schedd.submit(dagAd, 1, True, resultAds)
                     schedd.spool(resultAds)
                     wpipe.write("OK")

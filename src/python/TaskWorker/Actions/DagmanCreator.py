@@ -8,6 +8,7 @@ Generates the condor submit files and the master DAG.
 import os
 import json
 import shutil
+import string
 import logging
 import commands
 import tempfile
@@ -18,7 +19,7 @@ import TaskWorker.WorkerExceptions
 
 import WMCore.WMSpec.WMTask
 
-dag_fragment = """
+DAG_FRAGMENT = """
 JOB Job%(count)d Job.submit
 #SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
 #SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $JOB
@@ -34,7 +35,7 @@ RETRY ASO%(count)d 3
 PARENT Job%(count)d CHILD ASO%(count)d
 """
 
-dag_fragment_workaround = """
+DAG_FRAGMENT_WORKAROUND = """
 JOB Job%(count)d Job.submit.%(count)d
 #SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
 #SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $JOB
@@ -52,12 +53,13 @@ PARENT Job%(count)d CHILD ASO%(count)d
 
 CRAB_HEADERS = \
 """
-+CRAB_ReqName = %(requestname)s
++CRAB_ReqName = "%(requestname)s"
 +CRAB_Workflow = %(workflow)s
 +CRAB_JobType = %(jobtype)s
 +CRAB_JobSW = %(jobsw)s
 +CRAB_JobArch = %(jobarch)s
 +CRAB_InputData = %(inputdata)s
++CRAB_OutputData = %(publishname)s
 +CRAB_ISB = %(cacheurl)s
 +CRAB_SiteBlacklist = %(siteblacklist)s
 +CRAB_SiteWhitelist = %(sitewhitelist)s
@@ -71,6 +73,7 @@ CRAB_HEADERS = \
 +CRAB_BlacklistT1 = %(blacklistT1)s
 """
 
+# NOTE: keep Arugments in sync with PanDAInjection.py.  ASO is very picky about argument order.
 JOB_SUBMIT = CRAB_HEADERS + \
 """
 CRAB_Attempt = %(attempt)d
@@ -79,6 +82,12 @@ CRAB_AdditionalOutputFiles = %(addoutputfiles_flatten)s
 CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
++CRAB_ReqName = "%(requestname)s"
+#CRAB_ReqName = %(requestname_flatten)s
+CRAB_DBSURL = %(dbsurl_flatten)s
+CRAB_PublishDBSURL = %(publishdbsurl_flatten)s
+CRAB_Publish = %(publication)s
+CRAB_AvailableSites = %(available_sites_flatten)s
 CRAB_Id = $(count)
 +CRAB_Id = $(count)
 +CRAB_Dest = "cms://%(temp_dest)s"
@@ -88,14 +97,17 @@ CRAB_Id = $(count)
 job_ad_information_attrs = MATCH_EXP_JOBGLIDEIN_CMSSite, JOBGLIDEIN_CMSSite
 
 universe = vanilla
-Executable = gWMS-CMSRunAnaly.sh
+Executable = gWMS-CMSRunAnalysis.sh
 Output = job_out.$(CRAB_Id)
 Error = job_err.$(CRAB_Id)
 Log = job_log.$(CRAB_Id)
-Arguments = "-o $(CRAB_AdditionalOutputFiles) -a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) --jobNumber=$(CRAB_Id)"
-transfer_input_files = CMSRunAnaly.sh, cmscp.py
+# args changed...
+
+Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles)"
+
+transfer_input_files = CMSRunAnalysis.sh, cmscp.py%(additional_input_files)s
 transfer_output_files = jobReport.json.$(count)
-Environment = SCRAM_ARCH=$(CRAB_JobArch)
+Environment = SCRAM_ARCH=$(CRAB_JobArch);%(additional_environment_options)s
 should_transfer_files = YES
 #x509userproxy = %(x509up_file)s
 use_x509userproxy = true
@@ -116,10 +128,10 @@ universe = local
 Executable = dag_bootstrap.sh
 Arguments = "ASO $(CRAB_AsyncDest) %(temp_dest)s %(output_dest)s $(count) $(Cluster).$(Process) cmsRun_$(count).log.tar.gz $(outputFiles)"
 Output = aso.$(count).out
-transfer_input_files = job_log.$(count), jobReport.json.$(count)
+transfer_input_files = job_log.$(count), jobReport.json.$(count)%(additional_input_files)s
 +TransferOutput = ""
 Error = aso.$(count).err
-Environment = PATH=/usr/bin:/bin
+Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
 use_x509userproxy true
 #x509userproxy = %(x509up_file)s
 leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
@@ -129,9 +141,9 @@ queue
 SPLIT_ARG_MAP = { "LumiBased" : "lumis_per_job",
                   "FileBased" : "files_per_job",}
 
-htcondor_78_workaround = True
+HTCONDOR_78_WORKAROUND = True
 
-logger = None
+LOGGER = None
 
 def escape_strings_to_classads(input):
     """
@@ -143,8 +155,8 @@ def escape_strings_to_classads(input):
     info = {}
     for var in 'workflow', 'jobtype', 'jobsw', 'jobarch', 'inputdata', 'splitalgo', 'algoargs', \
            'cachefilename', 'cacheurl', 'userhn', 'publishname', 'asyncdest', 'dbsurl', 'publishdbsurl', \
-           'userdn', 'requestname':
-        val = input[var]
+           'userdn', 'requestname', 'publication':
+        val = input.get(var, None)
         if val == None:
             info[var] = 'undefined'
         else:
@@ -167,7 +179,9 @@ def escape_strings_to_classads(input):
     info['algoargs'] = '"' + json.dumps({'halt_job_on_file_boundaries': False, 'splitOnRun': False, splitArgName : input['algoargs']}).replace('"', r'\"') + '"'
     info['attempt'] = 0
 
-    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest"]:
+    info['available_sites_flatten'] = '%s' % ", ".join(input['available_sites'])
+
+    for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest", "dbsurl", "publishdbsurl", "requestname"]:
         info[var+"_flatten"] = input[var]
 
     # TODO: PanDA wrapper wants some sort of dictionary.
@@ -203,8 +217,9 @@ def makeJobSubmit(task):
     info['asyncdest'] = info['tm_asyncdest']
     info['dbsurl'] = info['tm_dbs_url']
     info['publishdbsurl'] = info['tm_publish_dbs_url']
+    info['publication'] = info['tm_publication']
     info['userdn'] = info['tm_user_dn']
-    info['requestname'] = task['tm_taskname']
+    info['requestname'] = string.replace(task['tm_taskname'],'"', '')
     info['savelogsflag'] = 0
     info['blacklistT1'] = 0
     info['siteblacklist'] = task['tm_site_blacklist']
@@ -216,9 +231,13 @@ def makeJobSubmit(task):
     info['runs'] = []
     info['lumis'] = []
     info = escape_strings_to_classads(info)
+    print info
+    print "There was the info ****"
+    logging.info("There was the info ***")
     with open("Job.submit", "w") as fd:
+        fd.write("# bring it for melo")
         fd.write(JOB_SUBMIT % info)
-
+        
     return info
 
 def make_specs(task, jobgroup, availablesites, outfiles, startjobid):
@@ -231,27 +250,27 @@ def make_specs(task, jobgroup, availablesites, outfiles, startjobid):
         i += 1
         remoteOutputFiles = []
         localOutputFiles = []
-        for file in outfiles:
-            info = file.rsplit(".", 1)
+        for origFile in outfiles:
+            info = origFile.rsplit(".", 1)
             if len(info) == 2:
                 fileName = "%s_%d.%s" % (info[0], i, info[1])
             else:
-                fileName = "%s_%d" % (file, i)
+                fileName = "%s_%d" % (origFile, i)
             remoteOutputFiles.append("%s" % fileName)
-            localOutputFiles.append("%s?remoteName=%s" % (file, fileName))
+            localOutputFiles.append("%s?remoteName=%s" % (origFile, fileName))
         remoteOutputFiles = " ".join(remoteOutputFiles)
         localOutputFiles = ", ".join(localOutputFiles)
         specs.append({'count': i, 'runAndLumiMask': runAndLumiMask, 'inputFiles': inputFiles,
                       'desiredSites': desiredSites, 'remoteOutputFiles': remoteOutputFiles,
                       'localOutputFiles': localOutputFiles})
-        logger.debug(specs[-1])
+        LOGGER.debug(specs[-1])
     return specs, i
 
 def create_subdag(splitter_result, **kwargs):
 
-    global logger
-    if not logger:
-        logger = logging.getLogger("DagmanCreator")
+    global LOGGER
+    if not LOGGER:
+        LOGGER = logging.getLogger("DagmanCreator")
 
     startjobid = 0
     specs = []
@@ -260,7 +279,7 @@ def create_subdag(splitter_result, **kwargs):
 
     outfiles = kwargs['task']['tm_outfiles'] + kwargs['task']['tm_tfile_outfiles'] + kwargs['task']['tm_edm_outfiles']
 
-    os.chmod("CMSRunAnaly.sh", 0755)
+    os.chmod("CMSRunAnalysis.sh", 0755)
 
     #fixedsites = set(self.config.Sites.available)
     for jobgroup in splitter_result:
@@ -269,15 +288,15 @@ def create_subdag(splitter_result, **kwargs):
             possiblesites = []
         else:
             possiblesites = jobs[0]['input_files'][0]['locations']
-        logger.debug("Possible sites: %s" % possiblesites)
-        logger.debug('Blacklist: %s; whitelist %s' % (kwargs['task']['tm_site_blacklist'], kwargs['task']['tm_site_whitelist']))
+        LOGGER.debug("Possible sites: %s" % possiblesites)
+        LOGGER.debug('Blacklist: %s; whitelist %s' % (kwargs['task']['tm_site_blacklist'], kwargs['task']['tm_site_whitelist']))
         if kwargs['task']['tm_site_whitelist']:
             availablesites = set(kwargs['task']['tm_site_whitelist'])
         else:
             availablesites = set(possiblesites) - set(kwargs['task']['tm_site_blacklist'])
         #availablesites = set(availablesites) & fixedsites
         availablesites = [str(i) for i in availablesites]
-        logger.info("Resulting available sites: %s" % ", ".join(availablesites))
+        LOGGER.info("Resulting available sites: %s" % ", ".join(availablesites))
 
         if not availablesites:
             msg = "No site available for submission of task %s" % (kwargs['task']['tm_taskname'])
@@ -288,16 +307,20 @@ def create_subdag(splitter_result, **kwargs):
 
     dag = ""
     for spec in specs:
-        if htcondor_78_workaround:
+        if HTCONDOR_78_WORKAROUND:
             with open("Job.submit", "r") as fd:
                 with open("Job.submit.%(count)d" % spec, "w") as out_fd:
                     out_fd.write("+desiredSites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+DESIRED_Sites=\"%(desiredSites)s\"\n" % spec)
                     out_fd.write("+CRAB_localOutputFiles=\"%(localOutputFiles)s\"\n" % spec)
+                    if kwargs.get('tarball_location', None):
+                        out_fd.write("Environment = CRAB_TASKMANAGER_TARBALL=%s" % kwargs['tarball_location'])
+                        if kwargs['tarball_location'] == 'local':
+                            out_fd.write("transfer_input_files = TaskManagerRun.tar.gz")
                     out_fd.write(fd.read())
-            dag += dag_fragment_workaround % spec
+            dag += DAG_FRAGMENT_WORKAROUND % spec
         else:
-            dag += dag_fragment % spec
+            dag += DAG_FRAGMENT % spec
 
     with open("RunJobs.dag", "w") as fd:
         fd.write(dag)
@@ -309,30 +332,15 @@ def create_subdag(splitter_result, **kwargs):
     if ('CRAB_ReqName' in kwargs['task']) and ('CRAB_UserDN' in kwargs['task']):
         const = 'TaskType =?= \"ROOT\" && CRAB_ReqName =?= "%s" && CRAB_UserDN =?= "%s"' % (task_name, userdn)
         cmd = "condor_qedit -const '%s' CRAB_JobCount %d" % (const, len(jobgroup.getJobs()))
-        logger.debug("+ %s" % cmd)
+        LOGGER.debug("+ %s" % cmd)
         status, output = commands.getstatusoutput(cmd)
         if status:
-            logger.error(output)
-            logger.error("Failed to record the number of jobs.")
+            LOGGER.error(output)
+            LOGGER.error("Failed to record the number of jobs.")
             return 1
 
     return info
 
-
-# Stubs for later.
-def async_stageout():
-    raise NotImplementedError()
-    return
-
-def postjob(retryStr, _):
-    retry = int(retryStr)
-    raise NotImplementedError()
-    return 0
-
-def prejob(retryStr, _):
-    retry = int(retryStr)
-    raise NotImplementedError()
-    return 0
 
 def getLocation(default_name, checkout_location):
     loc = default_name
@@ -350,8 +358,8 @@ class DagmanCreator(TaskAction.TaskAction):
     """
 
     def execute(self, *args, **kw):
-        global logger
-        logger = self.logger
+        global LOGGER
+        LOGGER = self.logger
 
         cwd = None
         if hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'scratchDir'):
@@ -359,7 +367,7 @@ class DagmanCreator(TaskAction.TaskAction):
 
             transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
-            gwms_location = getLocation('gWMS-CMSRunAnaly.sh', 'CAFTaskWorker/bin/')
+            gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
             bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
 
             cwd = os.getcwd()
