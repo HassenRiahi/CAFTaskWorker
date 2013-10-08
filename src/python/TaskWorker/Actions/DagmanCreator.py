@@ -53,12 +53,7 @@ PARENT Job%(count)d CHILD ASO%(count)d
 
 CRAB_HEADERS = \
 """
-<<<<<<< HEAD
 +CRAB_ReqName = "%(requestname)s"
-=======
-+CRAB_ReqName = %(requestname)s
-+CRAB_ReqNameExpr = %(requestname)s
->>>>>>> 5f2086e589eba6e0d934e53a479689f0a1f795fa
 +CRAB_Workflow = %(workflow)s
 +CRAB_JobType = %(jobtype)s
 +CRAB_JobSW = %(jobsw)s
