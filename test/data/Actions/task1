@@ -13,13 +13,15 @@
  "tm_user_vo": "cms",
  "tm_user_role": "user",
  "tm_user_group": "/cms",
- "tm_transformation": "CMSRunAnaly.sh",
+ "tm_transformation": "CMSRunAnalysis.sh",
  "tm_job_sw": "CMSSW_5_3_7",
  "tm_job_arch": "slc5_amd64_gcc462",
- "tm_cache_url": "https://voatlas178.cern.ch:25443",
+ "tm_cache_url": "https://voatlas294.cern.ch:25443",
  "tm_user_sandbox": "d5d0147f-aa24-43ea-a776-c53d1d1923bedefault.tgz",
  "tm_asyncdest": "T2_US_Nebraska",
  "tm_username": "bbockelm",
  "tm_publish_name": "crab3_test",
- "tm_publish_dbs_url": ""
+ "tm_publish_dbs_url": "",
+ "tm_publication": "T",
+ "tm_job_type": "Analysis"
 }

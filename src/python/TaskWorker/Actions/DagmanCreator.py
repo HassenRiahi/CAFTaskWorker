@@ -53,7 +53,7 @@ PARENT Job%(count)d CHILD ASO%(count)d
 
 CRAB_HEADERS = \
 """
-+CRAB_ReqName = "%(requestname)s"
++CRAB_ReqName = %(requestname)s
 +CRAB_Workflow = %(workflow)s
 +CRAB_JobType = %(jobtype)s
 +CRAB_JobSW = %(jobsw)s
@@ -82,12 +82,11 @@ CRAB_AdditionalOutputFiles = %(addoutputfiles_flatten)s
 CRAB_JobSW = %(jobsw_flatten)s
 CRAB_JobArch = %(jobarch_flatten)s
 CRAB_Archive = %(cachefilename_flatten)s
-+CRAB_ReqName = "%(requestname)s"
++CRAB_ReqName = %(requestname)s
 #CRAB_ReqName = %(requestname_flatten)s
 CRAB_DBSURL = %(dbsurl_flatten)s
 CRAB_PublishDBSURL = %(publishdbsurl_flatten)s
 CRAB_Publish = %(publication)s
-CRAB_AvailableSites = %(available_sites_flatten)s
 CRAB_Id = $(count)
 +CRAB_Id = $(count)
 +CRAB_Dest = "cms://%(temp_dest)s"
@@ -105,7 +104,7 @@ Log = job_log.$(CRAB_Id)
 
 Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) --cmsswVersion=$(CRAB_JobSW) --scramArch=$(CRAB_JobArch) '--inputFile=$(inputFiles)' '--runAndLumis=$(runAndLumiMask)' -o $(CRAB_AdditionalOutputFiles)"
 
-transfer_input_files = CMSRunAnalysis.sh, cmscp.py%(additional_input_files)s
+transfer_input_files = CMSRunAnalysis.sh, cmscp.py
 transfer_output_files = jobReport.json.$(count)
 Environment = SCRAM_ARCH=$(CRAB_JobArch);%(additional_environment_options)s
 should_transfer_files = YES
@@ -128,7 +127,7 @@ universe = local
 Executable = dag_bootstrap.sh
 Arguments = "ASO $(CRAB_AsyncDest) %(temp_dest)s %(output_dest)s $(count) $(Cluster).$(Process) cmsRun_$(count).log.tar.gz $(outputFiles)"
 Output = aso.$(count).out
-transfer_input_files = job_log.$(count), jobReport.json.$(count)%(additional_input_files)s
+transfer_input_files = job_log.$(count), jobReport.json.$(count)
 +TransferOutput = ""
 Error = aso.$(count).err
 Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
@@ -178,8 +177,6 @@ def escape_strings_to_classads(input):
     splitArgName = SPLIT_ARG_MAP[input['splitalgo']]
     info['algoargs'] = '"' + json.dumps({'halt_job_on_file_boundaries': False, 'splitOnRun': False, splitArgName : input['algoargs']}).replace('"', r'\"') + '"'
     info['attempt'] = 0
-
-    info['available_sites_flatten'] = '%s' % ", ".join(input['available_sites'])
 
     for var in ["cacheurl", "jobsw", "jobarch", "cachefilename", "asyncdest", "dbsurl", "publishdbsurl", "requestname"]:
         info[var+"_flatten"] = input[var]
@@ -231,6 +228,7 @@ def makeJobSubmit(task):
     info['runs'] = []
     info['lumis'] = []
     info = escape_strings_to_classads(info)
+    info.setdefault("additional_environment_options", '')
     print info
     print "There was the info ****"
     logging.info("There was the info ***")
@@ -365,7 +363,7 @@ class DagmanCreator(TaskAction.TaskAction):
         if hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'scratchDir'):
             temp_dir = tempfile.mkdtemp(prefix='_' + kw['task']['tm_taskname'], dir=self.config.TaskWorker.scratchDir)
 
-            transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/')
+            transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
             gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
             bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')

@@ -239,6 +239,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
                     resultAds = []
                     htcondor.SecMan().invalidateAllSessions()
                     os.environ['X509_USER_PROXY'] = info['userproxy']
+                    htcondor.param['SEC_CLIENT_AUTHENTICATION_METHODS'] = 'FS,GSI'
                     htcondor.param['DELEGATE_FULL_JOB_GSI_CREDENTIALS'] = 'true'
                     schedd.submit(dagAd, 1, True, resultAds)
                     schedd.spool(resultAds)
@@ -252,7 +253,7 @@ class DagmanSubmitter(TaskAction.TaskAction):
         wpipe.close()
         results = rpipe.read()
         if results != "OK":
-            raise Exception("Failure when submitting HTCondor task: %s" % results)
+            raise Exception("Failure when submitting HTCondor task: '%s'" % results)
 
         schedd.reschedule()
 

@@ -68,7 +68,7 @@ LastJobLeaseRenewal = 1370875794
 LastRemoteHost = "glidein_15193@red-d9n20.red.hcc.unl.edu"
 TerminationPending = true
 x509userproxysubject = "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=bbockelm/CN=659869/CN=Brian Paul Bockelman"
-TransferInput = "CMSRunAnaly.sh,cmscp.py"
+TransferInput = "CMSRunAnalysis.sh,cmscp.py"
 CRAB_JobArch = "slc5_amd64_gcc462"
 PeriodicRelease = false
 LastPublicClaimId = "<172.16.9.20:36481>#1370875260#1#..."
