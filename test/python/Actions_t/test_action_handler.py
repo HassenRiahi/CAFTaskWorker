@@ -65,7 +65,7 @@ class TestActionHandler(unittest.TestCase):
         self.assertTrue(hasattr(self.gwms_config.TaskWorker, "htcondorPool"))
         self.assertEquals(self.gwms_config.TaskWorker.htcondorPool, "glidein-collector.t2.ucsd.edu")
         self.assertTrue(hasattr(self.gwms_config.TaskWorker, "htcondorSchedds"))
-        self.assertTrue("submit-5.t2.ucsd.edu" in self.gwms_config.TaskWorker.htcondorSchedds)
+        self.assertTrue("crab3test@submit-5.t2.ucsd.edu" in self.gwms_config.TaskWorker.htcondorSchedds)
         self.assertTrue(hasattr(self.gwms_config.TaskWorker, "scratchDir"))
         handler = Handler.TaskHandler(self.task)
         action_args = []
