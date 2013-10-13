@@ -35,22 +35,6 @@ RETRY ASO%(count)d 3
 PARENT Job%(count)d CHILD ASO%(count)d
 """
 
-DAG_FRAGMENT_WORKAROUND = """
-JOB Job%(count)d Job.submit.%(count)d
-#SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
-#SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $JOB
-#PRE_SKIP Job%(count)d 3
-#TODO: Disable retries for now - fail fast to help debug
-#RETRY Job%(count)d 3
-VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s"
-
-JOB ASO%(count)d ASO.submit
-VARS ASO%(count)d count="%(count)d" outputFiles="%(remoteOutputFiles)s"
-RETRY ASO%(count)d 3
-
-PARENT Job%(count)d CHILD ASO%(count)d
-"""
-
 CRAB_HEADERS = \
 """
 +CRAB_ReqName = %(requestname)s
@@ -125,7 +109,7 @@ CRAB_AsyncDest = %(asyncdest_flatten)s
 
 universe = local
 Executable = dag_bootstrap.sh
-Arguments = "ASO $(CRAB_AsyncDest) %(temp_dest)s %(output_dest)s $(count) $(Cluster).$(Process) cmsRun_$(count).log.tar.gz $(outputFiles)"
+Arguments = "ASO %(temp_dest)s %(output_dest)s cmsRun_$(count).log.tar.gz $(outputFiles)"
 Output = aso.$(count).out
 transfer_input_files = job_log.$(count), jobReport.json.$(count)
 +TransferOutput = ""
@@ -139,8 +123,6 @@ queue
 
 SPLIT_ARG_MAP = { "LumiBased" : "lumis_per_job",
                   "FileBased" : "files_per_job",}
-
-HTCONDOR_78_WORKAROUND = True
 
 LOGGER = None
 
@@ -279,9 +261,12 @@ def create_subdag(splitter_result, **kwargs):
 
     os.chmod("CMSRunAnalysis.sh", 0755)
 
+    server_data = []
+
     #fixedsites = set(self.config.Sites.available)
     for jobgroup in splitter_result:
         jobs = jobgroup.getJobs()
+
         if not jobs:
             possiblesites = []
         else:
@@ -303,22 +288,11 @@ def create_subdag(splitter_result, **kwargs):
         jobgroupspecs, startjobid = make_specs(kwargs['task'], jobgroup, availablesites, outfiles, startjobid)
         specs += jobgroupspecs
 
+        # TODO: PanDA implementation makes a POST call about job data ... not sure what our equiv is.
+
     dag = ""
     for spec in specs:
-        if HTCONDOR_78_WORKAROUND:
-            with open("Job.submit", "r") as fd:
-                with open("Job.submit.%(count)d" % spec, "w") as out_fd:
-                    out_fd.write("+desiredSites=\"%(desiredSites)s\"\n" % spec)
-                    out_fd.write("+DESIRED_Sites=\"%(desiredSites)s\"\n" % spec)
-                    out_fd.write("+CRAB_localOutputFiles=\"%(localOutputFiles)s\"\n" % spec)
-                    if kwargs.get('tarball_location', None):
-                        out_fd.write("Environment = CRAB_TASKMANAGER_TARBALL=%s" % kwargs['tarball_location'])
-                        if kwargs['tarball_location'] == 'local':
-                            out_fd.write("transfer_input_files = TaskManagerRun.tar.gz")
-                    out_fd.write(fd.read())
-            dag += DAG_FRAGMENT_WORKAROUND % spec
-        else:
-            dag += DAG_FRAGMENT % spec
+        dag += DAG_FRAGMENT % spec
 
     with open("RunJobs.dag", "w") as fd:
         fd.write(dag)
@@ -355,7 +329,7 @@ class DagmanCreator(TaskAction.TaskAction):
     into HTCondor
     """
 
-    def execute(self, *args, **kw):
+    def executeInternal(self, *args, **kw):
         global LOGGER
         LOGGER = self.logger
 
@@ -385,4 +359,17 @@ class DagmanCreator(TaskAction.TaskAction):
             if cwd:
                 os.chdir(cwd)
         return TaskWorker.DataObjects.Result.Result(task=kw['task'], result=(temp_dir, info))
+
+    def execute(self, *args, **kw):
+        try:
+            return self.executeInternal(*args, **kw)
+        except Exception, e:
+            configreq = {'workflow': kwargs['task']['tm_taskname'],
+                             'substatus': "FAILED",
+                             'subjobdef': -1,
+                             'subuser': kwargs['task']['tm_user_dn'],
+                             'subfailure': b64encode(str(e)),}
+            self.logger.error("Pushing information centrally %s" %(str(configreq)))
+            data = urllib.urlencode(configreq)
+            self.server.put(self.resturl, data=data)
 

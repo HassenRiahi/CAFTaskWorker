@@ -7,6 +7,8 @@ import os
 import random
 import traceback
 
+import HTCondorLocator
+
 import TaskWorker.Actions.TaskAction as TaskAction
 
 from TaskWorker.Actions.DagmanCreator import CRAB_HEADERS
@@ -15,15 +17,10 @@ from TaskWorker.Actions.DagmanCreator import CRAB_HEADERS
 try:
     import classad
     import htcondor
-except ImportError:
+except ImportError, _:
     #pylint: disable=C0103
     classad = None
     htcondor = None
-try:
-    import WMCore.BossAir.Plugins.RemoteCondorPlugin as RemoteCondorPlugin
-except ImportError:
-    if not htcondor:
-        raise ImportError, "You must have either the RemoteCondorPlugin or htcondor modules"
 
 CRAB_META_HEADERS = \
 """
@@ -105,76 +102,24 @@ class DagmanSubmitter(TaskAction.TaskAction):
     Submit a DAG to a HTCondor schedd
     """
 
-    def getRemoteCondor(self):
-        if self.config and hasattr(self.config, 'General') and hasattr(self.config.General, 'enableGsissh'):
-            return self.config.General.enableGsissh
-        elif htcondor:
-            return False
-        return True
-
-    def getSchedd(self):
-        """
-        Determine a schedd to use for this task.
-        """
-        if self.getRemoteCondor():
-            return self.config.BossAir.remoteUserHost
-        collector = None
-        if self.config and hasattr(self.config, 'General') and hasattr(self.config.General, 'condorPool'):
-            collector = self.config.General.condorPool
-        elif self.config and hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'htcondorPool'):
-            collector = self.config.TaskWorker.htcondorPool
-        schedd = "localhost"
-        if self.config and hasattr(self.config, 'General') and hasattr(self.config.General, 'condorScheddList'):
-            random.shuffle(self.config.General.condorScheddList)
-            schedd = self.config.General.condorScheddList[0]
-        elif self.config and hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'htcondorSchedds'):
-            random.shuffle(self.config.TaskWorker.htcondorSchedds)
-            schedd = self.config.TaskWorker.htcondorSchedds[0]
-        if collector:
-            return "%s:%s" % (schedd, collector)
-        return schedd
-
-    def getScheddObj(self, name):
-        """
-        Return a tuple (schedd, address) containing an object representing the
-        remote schedd and its corresponding address.
-
-        If address is None, then we are using the BossAir plugin.  Otherwise,
-        the schedd object is of type htcondor.Schedd.
-        """
-        if not self.getRemoteCondor():
-            if name == "localhost":
-                schedd = htcondor.Schedd()
-                with open(htcondor.param['SCHEDD_ADDRESS_FILE']) as fd:
-                    address = fd.read().split("\n")[0]
-            else:
-                info = name.split(":")
-                pool = "localhost"
-                if len(info) == 2:
-                    pool = info[1]
-                coll = htcondor.Collector(self.getCollector(pool))
-                scheddAd = coll.locate(htcondor.DaemonTypes.Schedd, info[0])
-                address = scheddAd['MyAddress']
-                schedd = htcondor.Schedd(scheddAd)
-            return schedd, address
-        else:
-            return RemoteCondorPlugin.RemoteCondorPlugin(self.config, logger=self.logger), None
-
-    def getCollector(self, name="localhost"):
-        """
-        Return an object representing the collector given the pool name.
-
-        If the BossAir plugin is used, this simply returns the name
-        """
-        # Direct submission style
-        if self.config and hasattr(self.config, 'General') and hasattr(self.config.General, 'condorPool'):
-            return self.config.General.condorPool
-        # TW style
-        elif self.config and hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'htcondorPool'):
-            return self.config.TaskWorker.htcondorPool
-        return name
-
     def execute(self, *args, **kw):
+        try:
+            return self.executeInternal(*args, **kw)
+        except Exception, e:
+            msg = "Failed to submit task %s; '%s'" % (kwargs['task']['tm_taskname'], str(e))
+            self.logger.error(msg)
+            configreq = {'workflow': kwargs['task']['tm_taskname'],
+                         'status': "FAILED",
+                         'subresource': 'failure',
+                         'failure': b64encode(msg)}
+            self.server.post(self.resturl, data = urllib.urlencode(configreq))
+            return [Result(task=kwargs['task'], err=msg)]
+
+    def executeInternal(self, *args, **kw):
+
+        if not htcondor:
+            raise Exception("Unable to import HTCondor module")
+
         task = kw['task']
         tempDir = args[0][0]
         info = args[0][1]
@@ -191,8 +136,9 @@ class DagmanSubmitter(TaskAction.TaskAction):
 
         try:
             info['remote_condor_setup'] = ''
-            scheddName = self.getSchedd()
-            schedd, address = self.getScheddObj(scheddName)
+            loc = HTCondorLocator.HTCondorLocator(self.config)
+            scheddName = loc.getSchedd()
+            schedd, address = loc.getScheddObj(scheddName)
             if address:
                 self.submitDirect(schedd, 'dag_bootstrap_startup.sh', arg, info)
             else:
@@ -200,6 +146,12 @@ class DagmanSubmitter(TaskAction.TaskAction):
                 schedd.submitRaw(task['tm_taskname'], jdl, task['userproxy'], inputFiles)
         finally:
             os.chdir(cwd)
+
+        configreq = {'workflow': kwargs['task']['tm_taskname'],
+                     'status': "SUBMITTED",
+                     'jobset': "-1",
+                     'subresource': 'success',}
+        self.server.post(self.resturl, data = data)
 
     def submitDirect(self, schedd, cmd, arg, info): #pylint: disable=R0201
         """
@@ -228,29 +180,11 @@ class DagmanSubmitter(TaskAction.TaskAction):
         dagAd["TaskType"] = "ROOT"
         dagAd["X509UserProxy"] = info['userproxy']
 
-        r, w = os.pipe()
-        rpipe = os.fdopen(r, 'r')
-        wpipe = os.fdopen(w, 'w')
-        if os.fork() == 0:
-            #pylint: disable=W0212
-            try:
-                rpipe.close()
-                try:
-                    resultAds = []
-                    htcondor.SecMan().invalidateAllSessions()
-                    os.environ['X509_USER_PROXY'] = info['userproxy']
-                    htcondor.param['SEC_CLIENT_AUTHENTICATION_METHODS'] = 'FS,GSI'
-                    htcondor.param['DELEGATE_FULL_JOB_GSI_CREDENTIALS'] = 'true'
-                    schedd.submit(dagAd, 1, True, resultAds)
-                    schedd.spool(resultAds)
-                    wpipe.write("OK")
-                    wpipe.close()
-                    os._exit(0)
-                except Exception: #pylint: disable=W0703
-                    wpipe.write(str(traceback.format_exc()))
-            finally:
-                os._exit(1)
-        wpipe.close()
+        with AuthenticatedSubprocess(proxy) as (parent, rpipe):
+            if not parent:
+                resultAds = []
+                schedd.submit(dagAd, 1, True, resultAds)
+                schedd.spool(resultAds)
         results = rpipe.read()
         if results != "OK":
             raise Exception("Failure when submitting HTCondor task: '%s'" % results)
