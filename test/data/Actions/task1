@@ -17,7 +17,7 @@
  "tm_job_sw": "CMSSW_5_3_7",
  "tm_job_arch": "slc5_amd64_gcc462",
  "tm_cache_url": "https://voatlas294.cern.ch:25443",
- "tm_user_sandbox": "d5d0147f-aa24-43ea-a776-c53d1d1923bedefault.tgz",
+ "tm_user_sandbox": "5a58c0d7-c7e0-4312-ba68-7fc22f647f5adefault.tgz",
  "tm_asyncdest": "T2_US_Nebraska",
  "tm_username": "bbockelm",
  "tm_publish_name": "crab3_test",
