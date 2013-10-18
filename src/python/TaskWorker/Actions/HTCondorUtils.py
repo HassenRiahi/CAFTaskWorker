@@ -10,13 +10,15 @@ def quote(value):
     ad = classad.ClassAd()
     ad["foo"] = str(value)
     return ad.lookup("foo").__str__()
-if quote in classad:
+try:
     quote = classad.quote
+except:
+    pass
 
-class AuthenticatedSubprocess():
+class AuthenticatedSubprocess(object):
 
     def __init__(self, proxy):
-        self.proxy = userproxy
+        self.proxy = proxy
 
     def __enter__(self):
         self.r, self.w = os.pipe()
@@ -27,7 +29,7 @@ class AuthenticatedSubprocess():
             htcondor.SecMan().invalidateAllSessions()
             htcondor.param['SEC_CLIENT_AUTHENTICATION_METHODS'] = 'FS,GSI'
             htcondor.param['DELEGATE_FULL_JOB_GSI_CREDENTIALS'] = 'true'
-            os.environ['X509_USER_PROXY'] = proxy
+            os.environ['X509_USER_PROXY'] = self.proxy
             self.rpipe.close()
         else:
             self.wpipe.close()

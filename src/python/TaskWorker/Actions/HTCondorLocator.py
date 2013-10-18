@@ -1,4 +1,6 @@
 
+import random
+
 import classad
 import htcondor
 
@@ -11,11 +13,9 @@ class HTCondorLocator(object):
         """
         Determine a schedd to use for this task.
         """
-        collector = None
-        elif self.config and hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'htcondorPool'):
-            collector = self.config.TaskWorker.htcondorPool
+        collector = self.getCollector()
         schedd = "localhost"
-        elif self.config and hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'htcondorSchedds'):
+        if self.config and hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'htcondorSchedds'):
             random.shuffle(self.config.TaskWorker.htcondorSchedds)
             schedd = self.config.TaskWorker.htcondorSchedds[0]
         if collector:

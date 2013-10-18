@@ -7,8 +7,10 @@ Generates the condor submit files and the master DAG.
 
 import os
 import json
+import base64
 import shutil
 import string
+import urllib
 import logging
 import commands
 import tempfile
@@ -97,7 +99,7 @@ use_x509userproxy = true
 # TODO: Uncomment this when we get out of testing mode
 Requirements = (target.IS_GLIDEIN =!= TRUE) || (target.GLIDEIN_CMSSite =!= UNDEFINED)
 #Requirements = ((target.IS_GLIDEIN =!= TRUE) || ((target.GLIDEIN_CMSSite =!= UNDEFINED) && (stringListIMember(target.GLIDEIN_CMSSite, DESIRED_SEs) )))
-leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
+#leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
 queue
 """
 
@@ -117,7 +119,7 @@ Error = aso.$(count).err
 Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
 use_x509userproxy true
 #x509userproxy = %(x509up_file)s
-leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
+#leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
 queue
 """
 
@@ -126,10 +128,8 @@ SPLIT_ARG_MAP = { "LumiBased" : "lumis_per_job",
 
 LOGGER = None
 
-def escape_strings_to_classads(input):
+def transform_strings(input):
     """
-    Poor-man's string escaping for ClassAds.  We do this as classad module isn't guaranteed to be present.
-
     Converts the arguments in the input dictionary to the arguments necessary
     for the job submit file string.
     """
@@ -168,8 +168,8 @@ def escape_strings_to_classads(input):
 
     info["output_dest"] = os.path.join("/store/user", input['userhn'], input['workflow'], input['publishname'])
     info["temp_dest"] = os.path.join("/store/temp/user", input['userhn'], input['workflow'], input['publishname'])
-    info['x509up_file'] = os.path.split(input['userproxy'])[-1]
-    info['userproxy'] = input['userproxy']
+    info['x509up_file'] = os.path.split(input['user_proxy'])[-1]
+    info['user_proxy'] = input['user_proxy']
     info['scratch'] = input['scratch']
 
     return info
@@ -209,7 +209,7 @@ def makeJobSubmit(task):
     # TODO: pass through these correctly.
     info['runs'] = []
     info['lumis'] = []
-    info = escape_strings_to_classads(info)
+    info = transform_strings(info)
     info.setdefault("additional_environment_options", '')
     print info
     print "There was the info ****"
@@ -337,7 +337,10 @@ class DagmanCreator(TaskAction.TaskAction):
         if hasattr(self.config, 'TaskWorker') and hasattr(self.config.TaskWorker, 'scratchDir'):
             temp_dir = tempfile.mkdtemp(prefix='_' + kw['task']['tm_taskname'], dir=self.config.TaskWorker.scratchDir)
 
-            transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
+            # FIXME: In PanDA, we provided the executable as a URL.
+            # So, the filename becomes http:// -- and doesn't really work.  Hardcoding the analysis wrapper.
+            #transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
+            transform_location = getLocation('CMSRunAnalysis.sh', 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
             gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
             bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
@@ -349,8 +352,6 @@ class DagmanCreator(TaskAction.TaskAction):
             shutil.copy(gwms_location, '.')
             shutil.copy(bootstrap_location, '.')
 
-            if 'X509_USER_PROXY' in os.environ:
-                kw['task']['userproxy'] = os.environ['X509_USER_PROXY']
             kw['task']['scratch'] = temp_dir
 
         try:
@@ -364,12 +365,13 @@ class DagmanCreator(TaskAction.TaskAction):
         try:
             return self.executeInternal(*args, **kw)
         except Exception, e:
-            configreq = {'workflow': kwargs['task']['tm_taskname'],
+            configreq = {'workflow': kw['task']['tm_taskname'],
                              'substatus': "FAILED",
                              'subjobdef': -1,
-                             'subuser': kwargs['task']['tm_user_dn'],
-                             'subfailure': b64encode(str(e)),}
+                             'subuser': kw['task']['tm_user_dn'],
+                             'subfailure': base64.b64encode(str(e)),}
             self.logger.error("Pushing information centrally %s" %(str(configreq)))
             data = urllib.urlencode(configreq)
             self.server.put(self.resturl, data=data)
+            raise
 

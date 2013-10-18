@@ -61,7 +61,7 @@ class TaskHandler(object):
                 nextinput = Result(task=self._task, result='StopHandler exception received, controlled stop')
                 break
             except Exception, exc:
-                msg = "Problem handling %s because of %s failure, tracebak follows\n" % (self._task['tm_taskname'], str(exc))
+                msg = "Problem handling %s because of %s failure, traceback follows\n" % (self._task['tm_taskname'], str(exc))
                 msg += str(traceback.format_exc())
                 self.logger.error(msg)
                 raise WorkerHandlerException(msg)
@@ -95,8 +95,8 @@ def handleNewTask(instance, resturl, config, task, *args, **kwargs):
     def glidein(config):
         """Performs the injection of a new task into Glidein
         :arg WMCore.Configuration config: input configuration"""
-        handler.addWork( DagmanCreator(glideinconfig=config, server=server, resturl=resturl) )
-        handler.addWork( DagmanSubmitter(glideinconfig=config, server=server, resturl=resturl) )
+        handler.addWork( DagmanCreator(config=config, server=server, resturl=resturl) )
+        handler.addWork( DagmanSubmitter(config=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the injection into PanDA of a new task
@@ -122,7 +122,7 @@ def handleResubmit(instance, resturl, config, task, *args, **kwargs):
     def glidein(config):
         """Performs the re-injection into Glidein
         :arg WMCore.Configuration config: input configuration"""
-        handler.addWork( DagmanResubmitter(glideinconfig=config, server=server, resturl=resturl) )
+        handler.addWork( DagmanResubmitter(config=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the re-injection into PanDA
@@ -151,7 +151,7 @@ def handleKill(instance, resturl, config, task, *args, **kwargs):
         """Performs kill of jobs sent through Glidein
         :arg WMCore.Configuration config: input configuration"""
         raise NotImplementedError
-        handler.addWork( DagmanKiller(glideinconfig=config, server=server, resturl=resturl) )
+        handler.addWork( DagmanKiller(config=config, server=server, resturl=resturl) )
 
     def panda(config):
         """Performs the re-injection into PanDA

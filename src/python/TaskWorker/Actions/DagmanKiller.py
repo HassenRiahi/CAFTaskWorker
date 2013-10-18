@@ -1,6 +1,8 @@
 
 import re
 
+import TaskWorker.Actions.TaskAction as TaskAction
+
 import HTCondorLocator
 import HTCondorUtils
 

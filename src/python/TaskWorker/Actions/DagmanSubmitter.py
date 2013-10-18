@@ -4,12 +4,16 @@ Submit a DAG directory created by the DagmanCreator component.
 """
 
 import os
+import base64
 import random
+import urllib
 import traceback
 
+import HTCondorUtils
 import HTCondorLocator
 
 import TaskWorker.Actions.TaskAction as TaskAction
+import TaskWorker.DataObjects.Result as Result
 
 from TaskWorker.Actions.DagmanCreator import CRAB_HEADERS
 
@@ -59,7 +63,7 @@ on_exit_hold = (ExitCode =!= UNDEFINED && ExitCode != 0)
 +Environment= strcat("PATH=/usr/bin:/bin:/opt/glidecondor/bin CONDOR_ID=", ClusterId, ".", ProcId, " %(additional_environment_options)s")
 +RemoteCondorSetup = "%(remote_condor_setup)s"
 +TaskType = "ROOT"
-X509UserProxy = %(userproxy)s
+X509UserProxy = %(user_proxy)s
 queue 1
 """
 
@@ -106,14 +110,14 @@ class DagmanSubmitter(TaskAction.TaskAction):
         try:
             return self.executeInternal(*args, **kw)
         except Exception, e:
-            msg = "Failed to submit task %s; '%s'" % (kwargs['task']['tm_taskname'], str(e))
+            msg = "Failed to submit task %s; '%s'" % (kw['task']['tm_taskname'], str(e))
             self.logger.error(msg)
-            configreq = {'workflow': kwargs['task']['tm_taskname'],
+            configreq = {'workflow': kw['task']['tm_taskname'],
                          'status': "FAILED",
                          'subresource': 'failure',
-                         'failure': b64encode(msg)}
+                         'failure': base64.b64encode(msg)}
             self.server.post(self.resturl, data = urllib.urlencode(configreq))
-            return [Result(task=kwargs['task'], err=msg)]
+            raise
 
     def executeInternal(self, *args, **kw):
 
@@ -127,7 +131,9 @@ class DagmanSubmitter(TaskAction.TaskAction):
         cwd = os.getcwd()
         os.chdir(tempDir)
 
-        inputFiles = ['gWMS-CMSRunAnalysis.sh', task['tm_transformation'], 'cmscp.py', 'RunJobs.dag']
+        #FIXME: hardcoding the transform name for now.
+        #inputFiles = ['gWMS-CMSRunAnalysis.sh', task['tm_transformation'], 'cmscp.py', 'RunJobs.dag']
+        inputFiles = ['gWMS-CMSRunAnalysis.sh', 'CMSRunAnalysis.sh', 'cmscp.py', 'RunJobs.dag']
         inputFiles += [i for i in os.listdir('.') if i.startswith('Job.submit')]
         info['inputFilesString'] = ", ".join(inputFiles)
         outputFiles = ["RunJobs.dag.dagman.out", "RunJobs.dag.rescue.001"]
@@ -138,20 +144,25 @@ class DagmanSubmitter(TaskAction.TaskAction):
             info['remote_condor_setup'] = ''
             loc = HTCondorLocator.HTCondorLocator(self.config)
             scheddName = loc.getSchedd()
+            self.logger.debug("Using scheduler %s." % scheddName)
             schedd, address = loc.getScheddObj(scheddName)
             if address:
                 self.submitDirect(schedd, 'dag_bootstrap_startup.sh', arg, info)
             else:
                 jdl = MASTER_DAG_SUBMIT_FILE % info
-                schedd.submitRaw(task['tm_taskname'], jdl, task['userproxy'], inputFiles)
+                schedd.submitRaw(task['tm_taskname'], jdl, task['user_proxy'], inputFiles)
         finally:
             os.chdir(cwd)
 
-        configreq = {'workflow': kwargs['task']['tm_taskname'],
+        configreq = {'workflow': kw['task']['tm_taskname'],
                      'status': "SUBMITTED",
                      'jobset': "-1",
                      'subresource': 'success',}
+        self.logger.debug("Pushing information centrally %s" %(str(configreq)))
+        data = urllib.urlencode(configreq)
         self.server.post(self.resturl, data = data)
+    
+        return Result.Result(task=kw['task'], result=(-1))
 
     def submitDirect(self, schedd, cmd, arg, info): #pylint: disable=R0201
         """
@@ -178,9 +189,9 @@ class DagmanSubmitter(TaskAction.TaskAction):
         dagAd["RemoteCondorSetup"] = info['remote_condor_setup']
         dagAd["Requirements"] = classad.ExprTree('true || false')
         dagAd["TaskType"] = "ROOT"
-        dagAd["X509UserProxy"] = info['userproxy']
+        dagAd["X509UserProxy"] = info['user_proxy']
 
-        with AuthenticatedSubprocess(proxy) as (parent, rpipe):
+        with HTCondorUtils.AuthenticatedSubprocess(info['user_proxy']) as (parent, rpipe):
             if not parent:
                 resultAds = []
                 schedd.submit(dagAd, 1, True, resultAds)

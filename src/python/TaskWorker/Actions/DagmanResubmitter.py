@@ -1,4 +1,6 @@
 
+import TaskWorker.Actions.TaskAction as TaskAction
+
 class DagmanResubmitter(TaskAction.TaskAction):
 
     """
