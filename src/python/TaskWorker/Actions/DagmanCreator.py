@@ -107,17 +107,16 @@ ASYNC_SUBMIT = CRAB_HEADERS + \
 """
 +TaskType = "ASO"
 +CRAB_Id = $(count)
-CRAB_AsyncDest = %(asyncdest_flatten)s
 
 universe = local
 Executable = dag_bootstrap.sh
-Arguments = "ASO %(temp_dest)s %(output_dest)s cmsRun_$(count).log.tar.gz $(outputFiles)"
+Arguments = "ASO %(asyncdest_flatten)s %(temp_dest)s %(output_dest)s $(count) $(Cluster).$(Process) cmsRun_$(count).log.tar.gz $(outputFiles)"
 Output = aso.$(count).out
 transfer_input_files = job_log.$(count), jobReport.json.$(count)
 +TransferOutput = ""
 Error = aso.$(count).err
 Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
-use_x509userproxy true
+use_x509userproxy = true
 #x509userproxy = %(x509up_file)s
 #leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
 queue
@@ -215,8 +214,9 @@ def makeJobSubmit(task):
     print "There was the info ****"
     logging.info("There was the info ***")
     with open("Job.submit", "w") as fd:
-        fd.write("# bring it for melo")
         fd.write(JOB_SUBMIT % info)
+    with open("ASO.submit", "w") as fd:
+        fd.write(ASYNC_SUBMIT % info)
         
     return info
 
@@ -343,13 +343,15 @@ class DagmanCreator(TaskAction.TaskAction):
             transform_location = getLocation('CMSRunAnalysis.sh', 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
             gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
-            bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
+            dag_bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
+            bootstrap_location = getLocation("dag_bootstrap.sh", "CRABServer/bin/")
 
             cwd = os.getcwd()
             os.chdir(temp_dir)
             shutil.copy(transform_location, '.')
             shutil.copy(cmscp_location, '.')
             shutil.copy(gwms_location, '.')
+            shutil.copy(dag_bootstrap_location, '.')
             shutil.copy(bootstrap_location, '.')
 
             kw['task']['scratch'] = temp_dir
