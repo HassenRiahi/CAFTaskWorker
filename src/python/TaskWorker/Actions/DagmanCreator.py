@@ -24,7 +24,7 @@ import WMCore.WMSpec.WMTask
 DAG_FRAGMENT = """
 JOB Job%(count)d Job.submit
 #SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
-#SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $MAX_RETRIES %(taskname)s %(count)d %(outputData)s %(sw)s %(asyncDest)s %(tempDest)s %(outputDest)s cmsRun_%(count)d.log.tar.gz %(remoteOutputFiles)s
+#SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETURN $RETRY $MAX_RETRIES %(taskname)s %(count)d %(outputData)s %(sw)s %(asyncDest)s %(tempDest)s %(outputDest)s cmsRun_%(count)d.log.tar.gz %(remoteOutputFiles)s
 #PRE_SKIP Job%(count)d 3
 RETRY Job%(count)d 3 UNLESS-EXIT 2
 VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s" +DESIRED_Sites="\\"%(desiredSites)s\\"" +CRAB_localOutputFiles="\\"%(localOutputFiles)s\\""
@@ -93,7 +93,8 @@ Arguments = "-a $(CRAB_Archive) --sourceURL=$(CRAB_ISB) --jobNumber=$(CRAB_Id) -
 
 transfer_input_files = CMSRunAnalysis.sh, cmscp.py
 transfer_output_files = jobReport.json.$(count)
-Environment = SCRAM_ARCH=$(CRAB_JobArch);%(additional_environment_options)s
+# TODO: fold this into the config file instead of hardcoding things.
+Environment = SCRAM_ARCH=$(CRAB_JobArch);CRAB_TASKMANAGER_TARBALL=http://hcc-briantest.unl.edu/CMSRunAnalysis-3.3.0-pre1.tgz;%(additional_environment_options)s
 should_transfer_files = YES
 #x509userproxy = %(x509up_file)s
 use_x509userproxy = true
@@ -346,11 +347,11 @@ class DagmanCreator(TaskAction.TaskAction):
             # FIXME: In PanDA, we provided the executable as a URL.
             # So, the filename becomes http:// -- and doesn't really work.  Hardcoding the analysis wrapper.
             #transform_location = getLocation(kw['task']['tm_transformation'], 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
-            transform_location = getLocation('CMSRunAnalysis.sh', 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
-            cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
-            gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
-            dag_bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CAFTaskWorker/bin/')
-            bootstrap_location = getLocation("dag_bootstrap.sh", "CAFTaskWorker/bin/")
+            transform_location = getLocation('CMSRunAnalysis.sh', 'CAFTaskWorker/scripts/')
+            cmscp_location = getLocation('cmscp.py', 'CAFTaskWorker/scripts/')
+            gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/scripts/')
+            dag_bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CAFTaskWorker/scripts/')
+            bootstrap_location = getLocation("dag_bootstrap.sh", "CAFTaskWorker/scripts/")
 
             cwd = os.getcwd()
             os.chdir(temp_dir)

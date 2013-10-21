@@ -66,7 +66,9 @@ if [ "x" == "x$X509_USER_PROXY" ] || [ ! -e $X509_USER_PROXY ]]; then
     env | grep -i proxy
     env | grep 509
     echo "Got the following things in the job ad that may help:"
-    cat $_CONDOR_JOB_AD | sort
+    if [ "X$_CONDOR_JOB_AD" != "X" ]; then
+      cat $_CONDOR_JOB_AD | sort
+    fi
     exit 5
 fi
 
@@ -85,7 +87,9 @@ export PYTHONPATH=/opt/glidecondor/lib/python:$PYTHONPATH
 export LD_LIBRARY_PATH=/opt/glidecondor/lib:/opt/glidecondor/lib/condor:$LD_LIBRARY_PATH
 echo "Printing current environment..."
 env
-echo "Printing current job ad..."
-cat $_CONDOR_JOB_AD
+if [ "X$_CONDOR_JOB_AD" != "X" ]; then
+  echo "Printing current job ad..."
+  cat $_CONDOR_JOB_AD
+fi
 echo "Now running the job in `pwd`..."
 exec python2.6 -m TaskWorker.TaskManagerBootstrap "$@"

@@ -25,7 +25,7 @@ class RetryJob(object):
         self.count = "-1"
 
     def get_job_ad(self):
-        cmd = "condor_q -userlog job_log.%s" % self.count
+        cmd = "condor_q -l -userlog job_log.%s" % self.count
         status, output = commands.getstatusoutput(cmd)
         if status:
             raise FatalError("Failed to query condor user log:\n%s" % output)
