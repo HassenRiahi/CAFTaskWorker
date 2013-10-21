@@ -77,6 +77,8 @@ CRAB_Id = $(count)
 +CRAB_Id = $(count)
 +CRAB_Dest = "cms://%(temp_dest)s"
 +TaskType = "Job"
++MaxWallTimeMins = 1315
++AccountingGroup = %(userhn)s
 
 +JOBGLIDEIN_CMSSite = "$$([ifThenElse(GLIDEIN_CMSSite is undefined, \\"Unknown\\", GLIDEIN_CMSSite)])"
 job_ad_information_attrs = MATCH_EXP_JOBGLIDEIN_CMSSite, JOBGLIDEIN_CMSSite
@@ -343,8 +345,8 @@ class DagmanCreator(TaskAction.TaskAction):
             transform_location = getLocation('CMSRunAnalysis.sh', 'CAFUtilities/src/python/transformation/CMSRunAnalysis/')
             cmscp_location = getLocation('cmscp.py', 'CRABServer/bin/')
             gwms_location = getLocation('gWMS-CMSRunAnalysis.sh', 'CAFTaskWorker/bin/')
-            dag_bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CRABServer/bin/')
-            bootstrap_location = getLocation("dag_bootstrap.sh", "CRABServer/bin/")
+            dag_bootstrap_location = getLocation('dag_bootstrap_startup.sh', 'CAFTaskWorker/bin/')
+            bootstrap_location = getLocation("dag_bootstrap.sh", "CAFTaskWorker/bin/")
 
             cwd = os.getcwd()
             os.chdir(temp_dir)
