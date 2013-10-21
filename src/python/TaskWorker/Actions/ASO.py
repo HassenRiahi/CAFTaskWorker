@@ -45,7 +45,7 @@ class FTSJob(object):
             os.system(cmd)
 
     def submit(self):
-        cmd = "glite-transfer-submit -s %s -f copyjobfile_%s" % (fts_server, self._count)
+        cmd = "glite-transfer-submit -o -s %s -f copyjobfile_%s" % (fts_server, self._count)
         print "+", cmd
         status, output = commands.getstatusoutput(cmd)
         if status:
