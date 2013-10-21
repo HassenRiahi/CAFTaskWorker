@@ -11,7 +11,7 @@ import classad
 
 import TaskWorker.Actions.DBSDataDiscovery as DBSDataDiscovery
 import TaskWorker.Actions.Splitter as Splitter
-import CRABInterface.Dagman.DagmanCreator as DagmanCreator
+import TaskWorker.Actions.DagmanCreator as DagmanCreator
 import TaskWorker.Actions.ASO as ASO
 import TaskWorker.Actions.PostJob as PostJob
 import TaskWorker.Actions.HTCondorUtils as HTCondorUtils
@@ -21,7 +21,7 @@ import WMCore.Configuration as Configuration
 def bootstrap():
     print "Entering TaskManagerBootstrap with args: %s" % sys.argv
     command = sys.argv[1]
-    elif command == "POSTJOB":
+    if command == "POSTJOB":
         return PostJob.PostJob().execute(*sys.argv[2:])
     elif command == "ASO":
         return ASO.async_stageout(*sys.argv[2:])
@@ -49,7 +49,7 @@ def bootstrap():
     ad['tm_outfiles'] = HTCondorUtils.unquote(ad.eval("CRAB_AdditionalOutputFiles"))
     ad['tm_tfile_outfiles'] = HTCondorUtils.unquote(ad.eval("CRAB_TFileOutputFiles"))
     ad['tm_edm_outfiles'] = HTCondorUtils.unquote(ad.eval("CRAB_EDMOutputFiles"))
-    ad['tm_site_whitelist'] = HTCondurUtils.unquote(ad.eval("CRAB_SiteWhitelist"))
+    ad['tm_site_whitelist'] = HTCondorUtils.unquote(ad.eval("CRAB_SiteWhitelist"))
     ad['tm_site_blacklist'] = HTCondorUtils.unquote(ad.eval("CRAB_SiteBlacklist"))
     ad['tm_job_type'] = 'Analysis'
     print "TaskManager got this raw ad"
