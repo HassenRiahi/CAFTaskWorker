@@ -150,7 +150,6 @@ def handleKill(instance, resturl, config, task, *args, **kwargs):
     def glidein(config):
         """Performs kill of jobs sent through Glidein
         :arg WMCore.Configuration config: input configuration"""
-        raise NotImplementedError
         handler.addWork( DagmanKiller(config=config, server=server, resturl=resturl) )
 
     def panda(config):
