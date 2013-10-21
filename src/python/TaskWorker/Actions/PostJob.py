@@ -14,6 +14,8 @@ import classad
 
 import WMCore.Services.PhEDEx.PhEDEx as PhEDEx
 
+import RetryJob
+
 fts_server = 'https://fts3-pilot.cern.ch:8443'
 
 g_Job = None
@@ -200,6 +202,7 @@ class PostJob():
                 fileInfo['inparentlfns'] = outputFile.get("input", [])
 
                 fileInfo['events'] = outputFile.get("events", -1)
+                fileInfo['checksums'] = outputFile.get("checksums", {"cksum": "0", "adler32": "0"})
 
                 if 'runs' not in outputFile:
                     continue
@@ -221,7 +224,7 @@ class PostJob():
         """
         for base_file in ["job_err", "job_out"]:
             try:
-                os.chmod("%s.%d" % (base_file, count), 0644)
+                os.chmod("%s.%d" % (base_file, self.crab_id), 0644)
             except OSError, oe:
                 if oe.errno != errno.ENOENT and oe.errno != errno.EPERM:
                     raise
@@ -239,9 +242,9 @@ class PostJob():
                          "publishdataname": self.ad['CRAB_OutputData'],
                          "appver":          self.ad['CRAB_JobSW'],
                          "outtype":         self.outtype, # Not implemented
-                         "checksummd5":     self.checksummd5, # Not implemented
-                         "checksumcksum":   self.checksumcksum, # Not implemented
-                         "checksumadler32": self.checksumadler32, # Not implementeed
+                         "checksummd5":     "-1", # Not implemented
+                         "checksumcksum":   fileInfo['checksums']['cksum'],
+                         "checksumadler32": fileInfo['checksums']['adler32'],
                          "outlocation":     fileInfo['outlocation'], 
                          "outtmplocation":  fileInfo['outdatasetname'],
                          "acquisitionera":  self.acquisitionera, # Not implemented
@@ -286,7 +289,7 @@ class PostJob():
             outfile[1]['outlocation'] = outfile[2][1]
 
         global g_Job
-        g_Job = FTSJob(transfer_list, count)
+        g_Job = FTSJob(transfer_list, self.crab_id)
         fts_job_result = g_Job.run()
 
         source_list = [i[0] for i in transfer_list]
@@ -304,6 +307,12 @@ class PostJob():
 
     def execute(retry_count, max_retries, reqname, id, outputdata, sw, async_dest, source_dir, dest_dir, *filenames):
         self.makeAd(reqname, id, outputdata, sw, async_dest)
+
+        retry = RetryJob.RetryJob()
+        retval = retry.execute(self.crab_id)
+        if retval:
+           return retval
+
         self.parseJson()
 
         self.fixPerms()
