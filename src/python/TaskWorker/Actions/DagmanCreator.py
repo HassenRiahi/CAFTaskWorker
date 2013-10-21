@@ -24,9 +24,9 @@ import WMCore.WMSpec.WMTask
 DAG_FRAGMENT = """
 JOB Job%(count)d Job.submit
 #SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
-#SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $JOB
+#SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $MAX_RETRIES %(taskname)s %(count)d %(outputdata)s %(sw)s %(asyncDest)s %(tempDest)s %(outputDest)s cmsRun_%(count)d.log.tar.gz %(remoteOutputFiles)s
 #PRE_SKIP Job%(count)d 3
-RETRY Job%(count)d 3
+RETRY Job%(count)d 3 UNLESS-EXIT 2
 VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s" +DESIRED_Sites="\\"%(desiredSites)s\\"" +CRAB_localOutputFiles="\\"%(localOutputFiles)s\\""
 
 JOB ASO%(count)d ASO.submit
@@ -243,7 +243,12 @@ def make_specs(task, jobgroup, availablesites, outfiles, startjobid):
         localOutputFiles = ", ".join(localOutputFiles)
         specs.append({'count': i, 'runAndLumiMask': runAndLumiMask, 'inputFiles': inputFiles,
                       'desiredSites': desiredSites, 'remoteOutputFiles': remoteOutputFiles,
-                      'localOutputFiles': localOutputFiles})
+                      'localOutputFiles': localOutputFiles, 'asyncDest': task['tm_asyncdest'],
+                      'sw': task['tm_job_sw'], 'taskname': task['tm_taskname'],
+                      'outputData': task['tm_publish_name'],
+                      'tempDest': os.path.join("/store/temp/user", task['tm_username'], task['tm_taskname'], task['tm_publish_name']),
+                      'outputDest': os.path.join("/store/user", task['tm_username'], task['tm_taskname'], task['tm_publish_name']),})
+
         LOGGER.debug(specs[-1])
     return specs, i
 
