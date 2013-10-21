@@ -26,7 +26,6 @@ JOB Job%(count)d Job.submit
 #SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
 #SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $JOB
 #PRE_SKIP Job%(count)d 3
-#TODO: Disable retries for now - fail fast to help debug
 RETRY Job%(count)d 3
 VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s" +DESIRED_Sites="\\"%(desiredSites)s\\"" +CRAB_localOutputFiles="\\"%(localOutputFiles)s\\""
 

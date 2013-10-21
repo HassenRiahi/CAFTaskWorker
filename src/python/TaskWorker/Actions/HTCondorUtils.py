@@ -14,6 +14,12 @@ try:
     quote = classad.quote
 except:
     pass
+def unquote(value):
+    return classad.ExprTree(value).eval()
+try:
+    unquote = classad.unquote
+except:
+    pass
 
 class AuthenticatedSubprocess(object):
 

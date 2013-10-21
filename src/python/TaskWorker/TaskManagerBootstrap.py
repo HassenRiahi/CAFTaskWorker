@@ -13,22 +13,16 @@ import TaskWorker.Actions.DBSDataDiscovery as DBSDataDiscovery
 import TaskWorker.Actions.Splitter as Splitter
 import CRABInterface.Dagman.DagmanCreator as DagmanCreator
 import TaskWorker.Actions.ASO as ASO
+import TaskWorker.Actions.PostJob as PostJob
+import TaskWorker.Actions.HTCondorUtils as HTCondorUtils
 
 import WMCore.Configuration as Configuration
-
-def megaEscape(val):
-    """
-    I hate this. Why are classads positively the worst
-    """
-    return classad.ExprTree(val).eval()
 
 def bootstrap():
     print "Entering TaskManagerBootstrap with args: %s" % sys.argv
     command = sys.argv[1]
-    if command == "PREJOB":
-        return DagmanCreator.postjob(*sys.argv[2:])
     elif command == "POSTJOB":
-        return DagmanCreator.prejob(*sys.argv[2:])
+        return PostJob.PostJob().execute(*sys.argv[2:])
     elif command == "ASO":
         return ASO.async_stageout(*sys.argv[2:])
 
@@ -52,11 +46,11 @@ def bootstrap():
     ad['tm_split_algo'] = ad.eval("CRAB_SplitAlgo")
     ad['tm_dbs_url'] = ad.eval("CRAB_DBSUrl")
     ad['tm_input_dataset'] = ad.eval("CRAB_InputData")
-    ad['tm_outfiles'] = megaEscape(ad.eval("CRAB_AdditionalOutputFiles"))
-    ad['tm_tfile_outfiles'] = megaEscape(ad.eval("CRAB_TFileOutputFiles"))
-    ad['tm_edm_outfiles'] = megaEscape(ad.eval("CRAB_EDMOutputFiles"))
-    ad['tm_site_whitelist'] = megaEscape(ad.eval("CRAB_SiteWhitelist"))
-    ad['tm_site_blacklist'] = megaEscape(ad.eval("CRAB_SiteBlacklist"))
+    ad['tm_outfiles'] = HTCondorUtils.unquote(ad.eval("CRAB_AdditionalOutputFiles"))
+    ad['tm_tfile_outfiles'] = HTCondorUtils.unquote(ad.eval("CRAB_TFileOutputFiles"))
+    ad['tm_edm_outfiles'] = HTCondorUtils.unquote(ad.eval("CRAB_EDMOutputFiles"))
+    ad['tm_site_whitelist'] = HTCondurUtils.unquote(ad.eval("CRAB_SiteWhitelist"))
+    ad['tm_site_blacklist'] = HTCondorUtils.unquote(ad.eval("CRAB_SiteBlacklist"))
     ad['tm_job_type'] = 'Analysis'
     print "TaskManager got this raw ad"
     print ad
