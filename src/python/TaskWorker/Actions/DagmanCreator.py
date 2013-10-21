@@ -26,7 +26,7 @@ JOB Job%(count)d Job.submit
 #SCRIPT PRE  Job%(count)d dag_bootstrap.sh PREJOB $RETRY $JOB
 #SCRIPT POST Job%(count)d dag_bootstrap.sh POSTJOB $RETRY $MAX_RETRIES %(taskname)s %(count)d %(outputdata)s %(sw)s %(asyncDest)s %(tempDest)s %(outputDest)s cmsRun_%(count)d.log.tar.gz %(remoteOutputFiles)s
 #PRE_SKIP Job%(count)d 3
-RETRY Job%(count)d 3
+RETRY Job%(count)d 3 UNLESS-EXIT 2
 VARS Job%(count)d count="%(count)d" runAndLumiMask="%(runAndLumiMask)s" inputFiles="%(inputFiles)s" +DESIRED_Sites="\\"%(desiredSites)s\\"" +CRAB_localOutputFiles="\\"%(localOutputFiles)s\\""
 
 JOB ASO%(count)d ASO.submit
