@@ -53,11 +53,11 @@ class DagmanKiller(TaskAction.TaskAction):
         except Exception, exc:
             self.logger.error(str(traceback.format_exc()))
         finally:
-            if kwargs['task']['kill_all']:
-                configreq = {'workflow': kwargs['task']['tm_taskname'], 'status': "KILLED"}
+            if kw['task']['kill_all']:
+                configreq = {'workflow': kw['task']['tm_taskname'], 'status': "KILLED"}
                 self.server.post(self.resturl, data = urllib.urlencode(configreq))
             else:
                 # TODO: Not sure what this does.
-                configreq = {'workflow': kwargs['task']['tm_taskname'], 'status': "SUBMITTED"}
+                configreq = {'workflow': kw['task']['tm_taskname'], 'status': "SUBMITTED"}
                 self.server.post(self.resturl, data = urllib.urlencode(configreq))
 
