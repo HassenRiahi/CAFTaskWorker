@@ -137,6 +137,7 @@ tar xzf crab3-condor-libs.tar.gz *.so* || exit 2
 
 pushd $WMCORE_PATH/src/python
 zip -rq $STARTDIR/CRAB3.zip WMCore PSetTweaks -x \*.pyc || exit 3
+zip -rq $STARTDIR/WMCore.zip
 popd
 
 pushd $TASKWORKER_PATH/src/python
@@ -195,14 +196,16 @@ touch lib/fake_condor_config
 
 mkdir -p bin
 cp $CRABSERVER_PATH/bin/* bin/
-cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis/CMSRunAnalysis.sh bin/
-cp $CAFUTILITIES_PATH/src/python/transformation/CMSRunAnalysis/CMSRunAnalysis.py .
-cp $CAFUTILITIES_PATH/src/python/transformation/TweakPSet.py .
+cp $TASKWORKER_PATH/scripts/CMSRunAnalysis.sh bin/
+cp $TASKWORKER_PATH/scripts/CMSRunAnalysis.py .
+cp $TASKWORKER_PATH/scripts/TweakPSet.py .
 
 echo "Making TaskManagerRun tarball"
 tar zcf $ORIGDIR/TaskManagerRun-$CRAB3_VERSION.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh CMSRunAnalysis.py bin TweakPSet.py || exit 4
 echo "Making CRAB3 client install"
 tar zcf $ORIGDIR/CRAB3-gWMS.tar.gz CRAB3.zip setup.sh crab3 crab gWMS-CMSRunAnalysis.sh bin lib || exit 4
+echo "Making CMSRunAnalysis tarball"
+tar zcf $ORIGDIR/CMSRunAnaly-$CRAB3_VERSION.tar.gz WMCore.zip TweakPSet.py CMSRunAnalysis.py TweakPSet.py
 
 popd
 
