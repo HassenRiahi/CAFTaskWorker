@@ -14,6 +14,9 @@ class DagmanResubmitter(TaskAction.TaskAction):
         if 'task' not in kw:
             raise ValueError("No task specified.")
         task = kw['task']
+        if 'tm_taskname' not in task:
+            raise ValueError("No taskname specified.")
+        workflow = task['tm_taskname']
         if 'user_proxy' not in task:
             raise ValueError("No proxy provided")
         proxy = task['user_proxy']
