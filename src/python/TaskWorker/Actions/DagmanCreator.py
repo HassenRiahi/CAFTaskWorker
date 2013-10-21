@@ -117,7 +117,7 @@ Output = aso.$(count).out
 transfer_input_files = job_log.$(count), jobReport.json.$(count)
 +TransferOutput = ""
 Error = aso.$(count).err
-Environment = PATH=/usr/bin:/bin;%(additional_environment_options)s
+Environment = PATH=/usr/bin:/bin;CRAB3_VERSION=3.3.0-pre1;%(additional_environment_options)s
 use_x509userproxy = true
 #x509userproxy = %(x509up_file)s
 #leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0)) && (time() - EnteredCurrentStatus < 14*24*60*60)
