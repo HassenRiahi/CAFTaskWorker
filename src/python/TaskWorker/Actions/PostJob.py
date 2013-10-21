@@ -10,6 +10,8 @@ import errno
 import signal
 import commands
 
+import classad
+
 import WMCore.Services.PhEDEx.PhEDEx as PhEDEx
 
 fts_server = 'https://fts3-pilot.cern.ch:8443'
@@ -45,7 +47,7 @@ class FTSJob(object):
             os.system(cmd)
 
     def submit(self):
-        cmd = "glite-transfer-submit -s %s -f copyjobfile_%s" % (fts_server, self._count)
+        cmd = "glite-transfer-submit -o -s %s -f copyjobfile_%s" % (fts_server, self._count)
         print "+", cmd
         status, output = commands.getstatusoutput(cmd)
         if status:
@@ -54,8 +56,8 @@ class FTSJob(object):
         print "Resulting transfer ID: %s" % output
         return output
 
-    def status(self, long=False):
-        if long:
+    def status(self, long_status=False):
+        if long_status:
             cmd = "glite-transfer-status -l -s %s %s" % (fts_server, self._id)
         else:
             cmd = "glite-transfer-status -s %s %s" % (fts_server, self._id)
@@ -69,9 +71,7 @@ class FTSJob(object):
         self._id = self.submit()
         if not REGEX_ID.match(self._id):
             raise Exception("Invalid ID returned from FTS transfer submit")
-        idx = 0
         while True:
-            idx += 1
             time.sleep(self._sleep)
             status = self.status()
             print status
@@ -145,6 +145,10 @@ def resolvePFNs(source_site, dest_site, source_dir, dest_dir, filenames):
     for filename in filenames:
         slfn = os.path.join(source_dir, filename)
         dlfn = os.path.join(dest_dir, filename)
+        if (source_site, slfn) not in dest_info:
+            print "Unable to map LFN %s at site %s" % (slfn, source_site)
+        if (dest_site, dlfn) not in dest_info:
+            print "Unable to map LFN %s at site %s" % (dlfn, dest_site)
         results.append((dest_info[source_site, slfn], dest_info[dest_site, dlfn]))
     return results
 
@@ -163,12 +167,13 @@ class PostJob():
         self.outputFiles = []
 
 
-    def parseAd(self):
-        with open(".job.ad") as fd:
-            self.ad = classad.parseOld(fd)
-        for attr in REQUIRED_ATTRS:
-            if attr not in self.ad:
-                raise Exception("Missing attribute in job ClassAd: %s" % attr)
+    def makeAd(self, reqname, id, outputdata, sw, async_dest):
+        self.ad = classad.ClassAd()
+        self.ad['CRAB_ReqName'] = reqname
+        self.ad['CRAB_Id'] = id
+        self.ad['CRAB_OutputData'] = outputdata
+        self.ad['CRAB_JobSW'] = sw
+        self.ad['CRAB_AsyncDest'] = async_dest
         self.crab_id = int(self.ad['CRAB_Id'])
 
 
@@ -286,21 +291,19 @@ class PostJob():
 
         source_list = [i[0] for i in transfer_list]
         dest_list = [i[1] for i in transfer_list]
-        sizes = determineSizes(source_list)
-        report_result = reportResults("%d.%d" % (self.ad['Cluster'], self.ad['Process']), dest_list, sizes)
-        if report_result:
-            return report_result
+        source_sizes = determineSizes(source_list)
+        dest_sizes = determineSizes(source_list)
+        sizes = zip(source_sizes, dest_sizes)
 
-        failures = len([i for i in sizes if i<0])
-
+        failures = len([i for i in sizes if (i[1]<0 or (i[0] != i[1]))])
         if failures:
             raise RuntimeError("There were %d failed stageout attempts" % failures)
 
         return fts_job_result
 
 
-    def execute(source_dir, dest_dir, *filenames):
-        self.parseAd()
+    def execute(retry_count, max_retries, reqname, id, outputdata, sw, async_dest, source_dir, dest_dir, *filenames):
+        self.makeAd(reqname, id, outputdata, sw, async_dest)
         self.parseJson()
 
         self.fixPerms()
