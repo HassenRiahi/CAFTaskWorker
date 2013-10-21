@@ -1,5 +1,9 @@
 
 import re
+import urllib
+import traceback
+
+import htcondor
 
 import TaskWorker.Actions.TaskAction as TaskAction
 
@@ -21,7 +25,7 @@ class DagmanKiller(TaskAction.TaskAction):
         if 'task' not in kw:
             raise ValueError("No task specified.")
         task = kw['task']
-        if 'tm_taskname' not in kw:
+        if 'tm_taskname' not in task:
             raise ValueError("No taskname specified")
         workflow = task['tm_taskname']
         if 'user_proxy' not in task:
@@ -42,7 +46,7 @@ class DagmanKiller(TaskAction.TaskAction):
         rootConst = "TaskType =?= \"ROOT\" && CRAB_ReqName =?= %s" % HTCondorUtils.quote(workflow)
         rootAttrList = ["ClusterId"]
 
-        with AuthenticatedSubprocess(proxy) as (parent, rpipe):
+        with HTCondorUtils.AuthenticatedSubprocess(proxy) as (parent, rpipe):
             if not parent:
                schedd.act(htcondor.JobAction.Hold, rootConst)
         results = rpipe.read()
@@ -52,7 +56,7 @@ class DagmanKiller(TaskAction.TaskAction):
     def execute(self, *args, **kw):
 
         try:
-            self.execute(*args, **kw)
+            self.executeInternal(*args, **kw)
         except Exception, exc:
             self.logger.error(str(traceback.format_exc()))
         finally:

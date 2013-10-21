@@ -1,4 +1,12 @@
 
+import urllib
+import traceback
+
+import htcondor
+
+import HTCondorLocator
+import HTCondorUtils
+
 import TaskWorker.Actions.TaskAction as TaskAction
 
 class DagmanResubmitter(TaskAction.TaskAction):
@@ -16,16 +24,12 @@ class DagmanResubmitter(TaskAction.TaskAction):
         task = kw['task']
         if 'tm_taskname' not in task:
             raise ValueError("No taskname specified.")
-        workflow = task['tm_taskname']
+        workflow = str(task['tm_taskname'])
         if 'user_proxy' not in task:
             raise ValueError("No proxy provided")
         proxy = task['user_proxy']
 
         self.logger.info("About to kill workflow: %s. Getting status first." % workflow)
-
-        workflow = str(workflow)
-        if not WORKFLOW_RE.match(workflow):
-            raise Exception("Invalid workflow name.")
 
         loc = HTCondorLocator.HTCondorLocator(self.config)
         scheddName = loc.getSchedd()
@@ -34,9 +38,9 @@ class DagmanResubmitter(TaskAction.TaskAction):
         # Release the DAG
         rootConst = "TaskType =?= \"ROOT\" && CRAB_ReqName =?= %s" % HTCondorUtils.quote(workflow)
 
-        with AuthenticatedSubprocess(proxy) as (parent, rpipe):
+        with HTCondorUtils.AuthenticatedSubprocess(proxy) as (parent, rpipe):
             if not parent:
-                schedd.act(htcondor.JobAction.Release, subDagConst)
+                schedd.act(htcondor.JobAction.Release, rootConst)
         results = rpipe.read()
         if results != "OK":
             raise Exception("Failure when killing job: %s" % results)
