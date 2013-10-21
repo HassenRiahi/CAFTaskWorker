@@ -167,6 +167,7 @@ class PostJob():
         self.output = None
         self.input = None
         self.outputFiles = []
+        #self.server = HTTPRequests(restinstance, self.config.TaskWorker.cmscert, self.config.TaskWorker.cmskey)
 
 
     def makeAd(self, reqname, id, outputdata, sw, async_dest):
@@ -241,16 +242,23 @@ class PostJob():
                          "outsize":         fileInfo['outsize'],
                          "publishdataname": self.ad['CRAB_OutputData'],
                          "appver":          self.ad['CRAB_JobSW'],
-                         "outtype":         self.outtype, # Not implemented
+                         "outtype":         "EDM", # Not implemented
                          "checksummd5":     "-1", # Not implemented
                          "checksumcksum":   fileInfo['checksums']['cksum'],
                          "checksumadler32": fileInfo['checksums']['adler32'],
                          "outlocation":     fileInfo['outlocation'], 
                          "outtmplocation":  fileInfo['outdatasetname'],
-                         "acquisitionera":  self.acquisitionera, # Not implemented
+                         "acquisitionera":  "2012", # Not implemented
                          "outlfn":          fileInfo['outlfn'],
                          "events":          fileInfo['events'],
                     }
+            # TODO: Figure out the bootstrap of the server / rest URL.
+            #self.server.post(self.resturl, data = urllib.urlencode(configreq))
+
+
+    def uploadFailure(self):
+        # Record this job as a permanent failure
+        return 9
 
 
     def getSourceSite(self):
@@ -264,7 +272,7 @@ class PostJob():
             # Didn't find it the first time, try looking in the jobReport.json
             if self.full_report.get('executed_site', None):
                 print "Getting source_site from jobReport"
-                source_site = report['executed_site']
+                source_site = self.full_report['executed_site']
             else:
                 # TODO: Testing mode. If nothing turns up, just say it wwas
                 #       Nebraska
@@ -273,7 +281,7 @@ class PostJob():
         return source_site
 
 
-    def stageout(source_dir, dest_dir, *filenames):
+    def stageout(self, source_dir, dest_dir, *filenames):
         self.dest_site = self.ad['CRAB_AsyncDest']
         source_site = self.getSourceSite()
 
@@ -305,11 +313,16 @@ class PostJob():
         return fts_job_result
 
 
-    def execute(retry_count, max_retries, reqname, id, outputdata, sw, async_dest, source_dir, dest_dir, *filenames):
+    def execute(self, status, retry_count, max_retries, reqname, id, outputdata, sw, async_dest, source_dir, dest_dir, *filenames):
+
+        if status and (retry_count == max_retries):
+            # This was our last retry and it failed.
+            return self.uploadFailure()
+
         self.makeAd(reqname, id, outputdata, sw, async_dest)
 
         retry = RetryJob.RetryJob()
-        retval = retry.execute(self.crab_id)
+        retval = retry.execute(status, retry_count, max_retries, self.crab_id)
         if retval:
            return retval
 

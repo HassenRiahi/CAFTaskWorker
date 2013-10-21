@@ -29,7 +29,7 @@ class RetryJob(object):
         status, output = commands.getstatusoutput(cmd)
         if status:
             raise FatalError("Failed to query condor user log:\n%s" % output)
-        self.ad = classad.parseOld(output)
+        self.ad = classad.parseOld(output.split("\n\n")[-1])
 
     def get_report(self):
         try:
@@ -94,7 +94,8 @@ class RetryJob(object):
         if not self.report:
             raise RecoverableError("Job did not produce a usable framework job report.")
 
-    def execute_internal(self, count):
+    def execute_internal(self, status, retry_count, max_retries, count):
+
         self.count = count
         self.get_job_ad()
         self.get_report()
