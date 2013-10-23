@@ -169,13 +169,13 @@ def async_stageout(dest_site, source_dir, dest_dir, count, job_id, *filenames, *
 
     # Here's the magic.  Pull out the site the job ran at from its user log
     if 'source_site' not in kwargs:
-        cmd = "condor_q -userlog job_log.%s -af MATCH_EXP_JOBGLIDEIN_CMSSite -af JOBGLIDEIN_CMSSite" % count
+        cmd = "condor_q -userlog job_log.%s -af JOBGLIDEIN_CMSSite" % count
         status, output = commands.getstatusoutput(cmd)
         if status:
             print "Failed to query condor user log:\n%s" % output
             return 1
-        match_site, source_site = output.split('\n')[0].split(" ", 1)
-        if match_site == 'Unknown' or source_site == 'Unknown':
+        source_site = output.split('\n')[-1].strip()
+        if source_site == 'Unknown' or source_site == "undefined":
             # Didn't find it the first time, try looking in the jobReport.json
             report = json.loads(open('jobReport.json.%s' % count, 'r').read())
             if report.get('executed_site', None):

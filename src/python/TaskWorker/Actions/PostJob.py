@@ -262,13 +262,13 @@ class PostJob():
 
 
     def getSourceSite(self):
-        cmd = "condor_q -userlog job_log.%d -af MATCH_EXP_JOBGLIDEIN_CMSSite -af JOBGLIDEIN_CMSSite" % self.crab_id
+        cmd = "condor_q -userlog job_log.%d -af JOBGLIDEIN_CMSSite" % self.crab_id
         status, output = commands.getstatusoutput(cmd)
         if status:
             print "Failed to query condor user log:\n%s" % output
             return 1
-        match_site, source_site = output.split('\n')[0].split(" ", 1)
-        if match_site == 'Unknown' or source_site == 'Unknown':
+        source_site = output.split('\n')[-1].strip()
+        if source_site == 'Unknown' or source_site == "undefined":
             # Didn't find it the first time, try looking in the jobReport.json
             if self.full_report.get('executed_site', None):
                 print "Getting source_site from jobReport"
