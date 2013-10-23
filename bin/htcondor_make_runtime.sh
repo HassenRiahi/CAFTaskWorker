@@ -36,6 +36,9 @@ CRABSERVERREPO=bbockelm
 CRABCLIENTDIR=$STARTDIR/CRABClient
 CRABCLIENTVER=3.2.0pre18-dagman1
 CRABCLIENTREPO=bbockelm
+
+WMCORERUNTIMEDIR=$STARTDIR/WMCore-alt
+
 [[ -d $STARTDIR ]] || mkdir -p $STARTDIR
 
 cp $BASEDIR/../scripts/gWMS-CMSRunAnalysis.sh $STARTDIR || exit 3
@@ -47,6 +50,7 @@ rm -rf $DBSDIR && mkdir -p $DBSDIR
 rm -rf $DLSDIR && mkdir -p $DLSDIR
 rm -rf $CRABSERVERDIR && mkdir -p $CRABSERVERDIR
 rm -rf $CRABCLIENTDIR && mkdir -p $CRABCLIENTDIR
+rm -rf $WMCORERUNTIMEDIR && mkdir -p $WMCORERUNTIMEDIR
 
 if [[ -n "$CRAB_OVERRIDE_SOURCE" ]]; then 
     REPLACEMENT_ABSOLUTE=$(readlink -f $CRAB_OVERRIDE_SOURCE)
@@ -55,8 +59,6 @@ elif [[ "x$1" != "x" ]]; then
 else
     REPLACEMENT_ABSOLUTE=""
 fi
-# blow away old directories
-rm -rf $STARTDIR/*/
 pushd $STARTDIR
 
 
@@ -135,9 +137,14 @@ tar xzf cherrypy.tar.gz || exit 2
 tar xzf sqlalchemy.tar.gz || exit 2
 tar xzf crab3-condor-libs.tar.gz *.so* || exit 2
 
+pushd $WMCORERUNTIMEDIR
+curl -L http://common-analysis-framework.cern.ch/CMSRunAnaly.tgz | tar zx || exit 3
+cp WMCore.zip $STARTDIR/WMCore.zip
+popd
+
 pushd $WMCORE_PATH/src/python
 zip -rq $STARTDIR/CRAB3.zip WMCore PSetTweaks -x \*.pyc || exit 3
-zip -rq $STARTDIR/WMCore.zip WMCore PSetTweaks -x \*.pyc || exit 3
+#zip -rq $STARTDIR/WMCore.zip WMCore PSetTweaks -x \*.pyc || exit 3
 popd
 
 pushd $TASKWORKER_PATH/src/python
