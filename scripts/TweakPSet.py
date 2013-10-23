@@ -17,7 +17,8 @@ parser.add_option('--oneEventMode', dest='oneEventMode', default=False)
 opts, args = parser.parse_args()
 oneEventMode = opts.oneEventMode
 if opts.oneEventMode:
-    print "TweakPSet.py is going to force one event mode"
+    print "One event mode disabled until we can put together a decent version of WMCore."
+    #print "TweakPSet.py is going to force one event mode"
 location = sys.argv[2]
 inputFiles = literal_eval(sys.argv[3])
 runAndLumis = literal_eval(sys.argv[4])
@@ -30,8 +31,8 @@ if sys.argv[1]=='MC':
     seeding=sys.argv[9]
     lheInputFiles=bool(literal_eval(sys.argv[10]))
     pset = SetupCMSSWPsetCore( location, map(str, inputFiles), runAndLumis, agentNumber, lfnBase, outputMods, int(firstEvent), int(lastEvent), int(firstLumi),\
-                    int(firstRun), seeding, lheInputFiles, oneEventMode=oneEventMode)
+                    int(firstRun), seeding, lheInputFiles)
 else:
-    pset = SetupCMSSWPsetCore( location, map(str, inputFiles), runAndLumis, agentNumber, lfnBase, outputMods, oneEventMode=oneEventMode)
+    pset = SetupCMSSWPsetCore( location, map(str, inputFiles), runAndLumis, agentNumber, lfnBase, outputMods)
 
 pset()

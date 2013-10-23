@@ -98,6 +98,9 @@ else
     jobrc=$?
 fi
 echo "The job had an exit code of $jobrc "
+
+cat jobLog.*
+cat scramOutput.log
 exit $jobrc
 
 _
